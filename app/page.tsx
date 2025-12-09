@@ -1,4 +1,5 @@
-// app/page.tsx
+"use client";
+
 import React from "react";
 
 const navItems = ["How it works", "Benefits", "Pricing", "FAQ"];

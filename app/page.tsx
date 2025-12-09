@@ -1,5 +1,4 @@
-"use client";
-
+// app/page.tsx
 import React from "react";
 
 const navItems = ["How it works", "Benefits", "Pricing", "FAQ"];
@@ -277,7 +276,7 @@ export default function Home() {
 
         {/* FOOTER */}
         <footer className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-slate-800 pt-6 text-[11px] text-slate-500 sm:flex-row">
-          <span>© {new Date().getFullYear()} Dr. Brett GPT. All rights reserved.</span>
+          <span>© 2025 Dr. Brett GPT. All rights reserved.</span>
           <div className="flex items-center gap-4">
             <button className="hover:text-slate-300">Terms & Disclaimer</button>
             <button className="hover:text-slate-300">Privacy</button>

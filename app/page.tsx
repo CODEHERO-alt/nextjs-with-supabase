@@ -1083,7 +1083,7 @@ const TopNav: React.FC = () => {
         >
           <a href="#top" className="flex items-center gap-2">
             <img
-              src="https://i.ibb.co/YOUR_REAL_PATH/bgpt-logo.png"
+              src="https://i.ibb.co/BVX6yYXg/BGPT-secondary-logo-or-icon.png"
               alt="BGPT logo"
               className="h-7 w-7 rounded-2xl border border-white/10 shadow-sm object-cover"
             />

@@ -1047,8 +1047,7 @@ const Footer: React.FC = () => {
             </a>
           </div>
           <p className="text-[10px] text-slate-500">
-            © {new Date().getFullYear()} The Mental Game Cafe · All rights
-            reserved.
+            © 2025 The Mental Game Cafe · All rights reserved.
           </p>
         </div>
       </div>

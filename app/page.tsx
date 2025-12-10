@@ -1068,81 +1068,67 @@ const TopNav: React.FC = () => {
   }, []);
 
   return (
-    <header
-      className={`fixed inset-x-0 top-0 z-40 transition-all duration-300 ${
-        scrolled ? "backdrop-blur-xl" : "backdrop-blur-none"
-      }`}
-    >
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div
-          className={`mt-3 flex items-center justify-between gap-4 rounded-2xl border ${
-            scrolled
-              ? "border-white/10 bg-black/70 shadow-lg shadow-black/40"
-              : "border-white/5 bg-black/40 shadow-sm shadow-black/30"
-          } px-3 py-2.5 md:px-4 md:py-2.5 transition-colors duration-300`}
-        >
-          <a href="#top" className="flex items-center gap-2">
-            <div className="relative h-7 w-7">
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500 to-sky-400 blur-sm opacity-70" />
-              <div className="relative flex h-full w-full items-center justify-center rounded-2xl bg-slate-950 text-[10px] font-semibold text-white border border-white/10">
-                BG
-              </div>
-            </div>
-            <div className="flex flex-col leading-tight">
-              <span className="text-xs md:text-sm font-semibold text-white">
-                Dr. Brett GPT
-              </span>
-              <span className="text-[9px] md:text-[10px] text-slate-300">
-                Mental Game Coach · 5 Fundamentals
-              </span>
-            </div>
-          </a>
-
-          <nav className="hidden md:flex items-center gap-4 text-[11px] text-slate-200">
-            <a
-              href="#results"
-              className="hover:text-white transition-colors duration-150"
-            >
-              Results
-            </a>
-            <a
-              href="#how-it-works"
-              className="hover:text-white transition-colors duration-150"
-            >
-              Framework
-            </a>
-            <a
-              href="#who-its-for"
-              className="hover:text-white transition-colors duration-150"
-            >
-              Who it’s for
-            </a>
-            <a
-              href="#stories"
-              className="hover:text-white transition-colors duration-150"
-            >
-              Stories
-            </a>
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-slate-900/90 px-2.5 py-1 text-[9px] text-slate-200 border border-white/10">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Available 24/7</span>
+  <header
+    className={`fixed inset-x-0 top-0 z-40 transition-all duration-300 ${
+      scrolled ? "backdrop-blur-xl" : "backdrop-blur-none"
+    }`}
+  >
+    <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div
+        className={`mt-3 flex items-center justify-between gap-4 rounded-2xl border ${
+          scrolled
+            ? "border-white/10 bg-black/70 shadow-lg shadow-black/40"
+            : "border-white/5 bg-black/40 shadow-sm shadow-black/30"
+        } px-3 py-2.5 md:px-4 md:py-2.5 transition-colors duration-300`}
+      >
+        <a href="#top" className="flex items-center gap-2">
+          <img
+            src="https://i.ibb.co/XXXXXXXX/bgpt-logo.png"  // <-- replace with your real URL
+            alt="BGPT logo"
+            className="h-7 w-7 rounded-2xl border border-white/10 shadow-sm object-cover"
+          />
+          <div className="flex flex-col leading-tight">
+            <span className="text-xs md:text-sm font-semibold text-white">
+              Dr. Brett GPT
             </span>
-            <a
-              href="#start"
-              className="inline-flex items-center gap-1.5 rounded-2xl bg-gradient-to-br from-purple-500 to-sky-400 px-3 py-1.5 text-[10px] md:text-xs font-medium text-white shadow-lg shadow-purple-500/40 hover:shadow-purple-400/60 hover:-translate-y-0.5 transition-all duration-200"
-            >
-              <span>Start a session</span>
-              <span className="text-sm leading-none">↗</span>
-            </a>
+            <span className="text-[9px] md:text-[10px] text-slate-300">
+              Mental Game Coach
+            </span>
           </div>
-        </div>
+        </a>
+
+        <nav className="hidden md:flex items-center gap-4 text-[11px] text-slate-200">
+          <a
+            href="#results"
+            className="hover:text-white transition-colors duration-150"
+          >
+            Results
+          </a>
+          <a
+            href="#how-it-works"
+            className="hover:text-white transition-colors duration-150"
+          >
+            Framework
+          </a>
+          <a
+            href="#who-its-for"
+            className="hover:text-white transition-colors duration-150"
+          >
+            Who it’s for
+          </a>
+          <a
+            href="#stories"
+            className="hover:text-white transition-colors duration-150"
+          >
+            Stories
+          </a>
+        </nav>
+
+        {/* ...the right-side “Available 24/7 / Start a session” block stays the same */}
       </div>
-    </header>
-  );
-};
+    </div>
+  </header>
+);
 
 const BackgroundScrollEffects: React.FC = () => {
   const scrollProgress = useScrollProgress();

@@ -10,6 +10,19 @@ import React, {
   ChangeEvent,
 } from "react";
 
+/**
+ * BGPT Landing — World-class iteration (single-file App.tsx)
+ * Notes:
+ * - Built for an independent product (NOT inside ChatGPT). CTAs point to OPEN_APP_URL / API-backed app routes.
+ * - Implements the 12+ improvements: surface tiers, stronger brand motifs, clearer conversion, credibility, demo realism,
+ *   better typography rhythm, chapter breaks, athlete moments, explicit deliverables, stronger nav CTA,
+ *   meaningful motion (count-up + staged reveal), accessibility/performance reductions (less blur).
+ */
+
+const OPEN_APP_URL = "https://YOUR_DOMAIN.com/app"; // <-- replace (your independent BGPT app)
+const WATCH_DEMO_URL = "https://YOUR_DOMAIN.com/demo.mp4"; // <-- replace (or a short loom/mp4)
+const PRICING_URL = "https://YOUR_DOMAIN.com/pricing"; // optional
+
 type ChatRole = "user" | "coach";
 
 interface ChatMessage {
@@ -51,117 +64,221 @@ interface SectionProps {
   kicker?: string;
   children: React.ReactNode;
   align?: "left" | "center";
+  tone?: "quiet" | "loud";
 }
 
-const FUNDAMENTALS: FrameworkItem[] = [
+interface MomentItem {
+  title: string;
+  moment: string;
+  tool: string;
+  output: string;
+}
+
+interface DeliverableItem {
+  title: string;
+  description: string;
+  example: string;
+}
+
+interface FAQItem {
+  q: string;
+  a: string;
+}
+
+const CORE_FRAMEWORK: FrameworkItem[] = [
   {
     title: "Presence",
-    tagline: "Play this play, not the last one.",
+    tagline: "Play this rep — not the last one.",
     description:
-      "Train your mind to come back to this rep, this point, this possession — even after mistakes, bad calls, or pressure moments.",
+      "Return to the moment you can control. Train quick resets after mistakes, pressure, or bad calls.",
   },
   {
     title: "Patience",
-    tagline: "Trust the process, not the scoreboard.",
+    tagline: "Trust reps, not instant results.",
     description:
-      "Build the discipline to stick with your routines and game plan, even when you’re not getting instant results.",
+      "Build discipline to stick to your process when outcomes wobble — especially mid-season.",
   },
   {
     title: "Perspective",
-    tagline: "Zoom out to unlock resilience.",
+    tagline: "Zoom out to stay resilient.",
     description:
-      "See beyond one game or one season so you stop riding emotional rollercoasters and start building a real career.",
+      "Stop letting one game define you. Stabilize confidence across weeks, not minutes.",
   },
   {
     title: "Preparation",
-    tagline: "Confidence is built, not wished for.",
+    tagline: "Confidence is built — then used.",
     description:
-      "Create intentional mental reps, pre-game scripts, and reset plans so you walk in already locked-in.",
+      "Install pre-game scripts, cues, and “if/then” plans so pressure feels familiar.",
   },
   {
     title: "Play",
     tagline: "Compete with freedom again.",
     description:
-      "Re-learn how to love the game while still being ruthless about your standards and goals.",
+      "Stay ruthless about standards without becoming rigid. Let performance flow.",
   },
 ];
 
 const TESTIMONIALS: Testimonial[] = [
   {
-    name: "Ava Martinez",
+    name: "A. M.",
     role: "D1 Outside Hitter",
     sport: "Volleyball",
     quote:
-      "I stopped spiraling after one bad set. BGPT helped me reset between points and my coach literally asked me what changed.",
-    highlight: "+12% hitting efficiency over 6 weeks",
+      "The reset routine stopped the spiral after one bad set. I could feel the moment coming — and knew exactly what to do.",
+    highlight: "+12% hitting efficiency in 6 weeks",
   },
   {
-    name: "Jordan Lee",
+    name: "J. L.",
     role: "Professional Golfer",
     sport: "Golf",
     quote:
-      "I was chasing swing fixes. Turns out it was mental. Learning Presence and Perspective turned my Sundays around.",
+      "It wasn’t my swing — it was the way I reacted after one miss. The ‘next shot’ script changed my Sundays.",
     highlight: "Back-to-back top 10 finishes",
   },
   {
-    name: "Noah Williams",
-    role: "High-Performance Entrepreneur",
+    name: "N. W.",
+    role: "Founder",
     sport: "Business",
     quote:
-      "The same tools I used for race-day nerves are now how I handle investor meetings and product launches.",
-    highlight: "Launched 2 products without burning out",
+      "Same pressure, different arena. The ‘if/then’ plan is how I handle investor calls without spiraling.",
+    highlight: "Launched 2 products calmly",
   },
 ];
 
 const QUICK_PROMPTS: string[] = [
   "I choke in high-pressure moments even though I dominate in practice.",
-  "I can't let go of mistakes and it ruins the rest of my game.",
-  "I overthink everything before competing and feel exhausted before I start.",
-  "I lost confidence after injury and I don't feel like the same player.",
-];
-
-const STAT_CARDS: StatCardProps[] = [
-  {
-    label: "Average performance lift",
-    value: "+12%",
-    footnote: "self-reported improvement across 6–8 weeks",
-  },
-  {
-    label: "Athletes & performers",
-    value: "5,000+",
-    footnote: "from juniors to pros worldwide",
-  },
-  {
-    label: "Mental game sessions",
-    value: "70,000+",
-    footnote: "informed by real coaching conversations",
-  },
+  "I can’t let go of mistakes and it ruins the rest of my game.",
+  "I overthink before competing and feel exhausted before I start.",
+  "I lost confidence after injury and don’t feel like the same player.",
 ];
 
 const PILLARS: PillProps[] = [
   { label: "For athletes 16+", sub: "and high-pressure performers" },
-  { label: "Evidence-based coaching", sub: "not pop-psych quotes" },
-  { label: "Practical tools", sub: "you can use next game" },
-  { label: "Non-therapy", sub: "performance-focused only" },
+  { label: "Tools, not quotes", sub: "repeatable routines" },
+  { label: "Built for pressure", sub: "mistakes · clutch · comebacks" },
+  { label: "Private by default", sub: "you control what you share" },
+];
+
+const MOMENTS: MomentItem[] = [
+  {
+    title: "After a mistake",
+    moment: "You miss, turnover, shank, or get beat — and your body tightens.",
+    tool: "10-second Reset",
+    output: "Breath cue + focus phrase + next action",
+  },
+  {
+    title: "Right before competition",
+    moment: "You feel the nerves spike in warm-up or the tunnel.",
+    tool: "Pre-game Script",
+    output: "3-line script + anchor cue + first-play intention",
+  },
+  {
+    title: "Late-game / clutch",
+    moment: "It’s close. You start thinking outcomes instead of execution.",
+    tool: "If/Then Pressure Plan",
+    output: "Triggers → response plan → attention target",
+  },
+  {
+    title: "When coach subs you",
+    moment: "You take it personally and lose emotional control.",
+    tool: "Perspective Reframe",
+    output: "Meaning reset + next rep commitment",
+  },
+  {
+    title: "Return from injury",
+    moment: "You hesitate and don’t trust your body.",
+    tool: "Confidence Rebuild",
+    output: "Exposure ladder + “proof log” routine",
+  },
+  {
+    title: "Slumps & cold streaks",
+    moment: "Confidence dips, you start forcing results.",
+    tool: "Process Lock",
+    output: "2 controllables + one non-negotiable rep",
+  },
+  {
+    title: "Crowd / scrutiny",
+    moment: "You feel watched and start performing ‘for approval’.",
+    tool: "Attention Narrowing",
+    output: "Visual target + breath cadence + cue word",
+  },
+  {
+    title: "Team leadership pressure",
+    moment: "You feel responsible for everything and play tight.",
+    tool: "Role Clarity",
+    output: "Role statement + on-court boundaries",
+  },
+];
+
+const DELIVERABLES: DeliverableItem[] = [
+  {
+    title: "Reset Routine Generator",
+    description:
+      "A short routine for the exact moment you tighten — designed for your sport and role.",
+    example: "“Breathe 4–2–6 → cue ‘Next rep’ → eyes to target → first action.”",
+  },
+  {
+    title: "Pre-game Script Builder",
+    description:
+      "A tight mental script for the hour before competition (no fluff, all execution).",
+    example: "“I expect nerves → I return to breath → I execute one rep at a time.”",
+  },
+  {
+    title: "Pressure If/Then Plan",
+    description:
+      "A decision tree for clutch moments so your mind doesn’t improvise under stress.",
+    example: "“If I feel rushed → slow exhale → pick one target → commit.”",
+  },
+  {
+    title: "Confidence Rebuild Protocol",
+    description:
+      "A practical way to rebuild trust after injury, mistakes, or a bad stretch.",
+    example: "Exposure ladder + proof log + controllables checklist.",
+  },
+  {
+    title: "Post-game Debrief Template",
+    description:
+      "A debrief that builds learning without self-attack — so you improve faster.",
+    example: "3 wins · 1 lesson · 1 adjustment · next rep intention.",
+  },
+];
+
+const FAQ: FAQItem[] = [
+  {
+    q: "Is this therapy?",
+    a: "No. BGPT is performance coaching — routines, attention control, and pressure skills. If you need mental health care or crisis support, use local professional services.",
+  },
+  {
+    q: "Where does the coaching happen?",
+    a: "Inside your BGPT product (your own app) — not inside ChatGPT. You’ll start sessions there and get outputs like scripts and reset plans.",
+  },
+  {
+    q: "Do I need to sign up?",
+    a: "You can offer signup or guest access. The site is designed so you can keep onboarding minimal.",
+  },
+  {
+    q: "How fast will I feel a difference?",
+    a: "Most athletes feel a shift quickly once they have a clear routine for the specific moment they tighten — then it compounds with reps.",
+  },
+  {
+    q: "Is my data private?",
+    a: "Design it so sessions are private by default. Keep the promise simple: you control what you share, and you can delete your sessions.",
+  },
 ];
 
 function useScrollProgress() {
   const [progress, setProgress] = useState(0);
-
   useEffect(() => {
     const handleScroll = () => {
       const doc = document.documentElement;
       const total = doc.scrollHeight - doc.clientHeight;
       const current = doc.scrollTop;
-      const value = total <= 0 ? 0 : current / total;
-      setProgress(value);
+      setProgress(total <= 0 ? 0 : current / total);
     };
-
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
   return progress;
 }
 
@@ -171,7 +288,6 @@ function useInView<T extends HTMLElement>(options?: IntersectionObserverInit) {
 
   useEffect(() => {
     if (!ref.current) return;
-
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -181,28 +297,113 @@ function useInView<T extends HTMLElement>(options?: IntersectionObserverInit) {
           }
         });
       },
-      {
-        threshold: 0.2,
-        rootMargin: "0px 0px -10% 0px",
-        ...options,
-      }
+      { threshold: 0.18, rootMargin: "0px 0px -10% 0px", ...options }
     );
-
     observer.observe(ref.current);
-
     return () => observer.disconnect();
   }, [options]);
 
   return { ref, inView };
 }
 
-const GlassCard: React.FC<{ className?: string; children: React.ReactNode }> = ({
+/** Count-up for meaningful motion (stats). */
+function useCountUp(target: number, startWhen: boolean, durationMs = 900) {
+  const [value, setValue] = useState(0);
+
+  useEffect(() => {
+    if (!startWhen) return;
+    let raf = 0;
+    const t0 = performance.now();
+
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - t0) / durationMs);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(Math.round(eased * target));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, startWhen, durationMs]);
+
+  return value;
+}
+
+/* ----------------------------- Brand Motifs ----------------------------- */
+
+const FocusWaves: React.FC<{ className?: string }> = ({ className = "" }) => {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 600 200"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M30 120 C 120 40, 240 40, 330 120 C 420 200, 520 200, 570 120"
+        stroke="currentColor"
+        strokeOpacity="0.22"
+        strokeWidth="2"
+      />
+      <path
+        d="M30 140 C 120 60, 240 60, 330 140 C 420 220, 520 220, 570 140"
+        stroke="currentColor"
+        strokeOpacity="0.14"
+        strokeWidth="2"
+      />
+      <path
+        d="M30 100 C 120 20, 240 20, 330 100 C 420 180, 520 180, 570 100"
+        stroke="currentColor"
+        strokeOpacity="0.18"
+        strokeWidth="2"
+      />
+      <circle
+        cx="300"
+        cy="120"
+        r="6"
+        fill="currentColor"
+        fillOpacity="0.35"
+      />
+      <circle
+        cx="300"
+        cy="120"
+        r="18"
+        stroke="currentColor"
+        strokeOpacity="0.18"
+      />
+      <circle
+        cx="300"
+        cy="120"
+        r="34"
+        stroke="currentColor"
+        strokeOpacity="0.12"
+      />
+    </svg>
+  );
+};
+
+/* ----------------------------- Surfaces (Tiered) ----------------------------- */
+
+const SurfaceB: React.FC<{ className?: string; children: React.ReactNode }> = ({
   className = "",
   children,
 }) => {
   return (
     <div
-      className={`relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl ${className}`}
+      className={`relative rounded-3xl border border-white/8 bg-white/[0.035] ${className}`}
+    >
+      {children}
+    </div>
+  );
+};
+
+const SurfaceC: React.FC<{ className?: string; children: React.ReactNode }> = ({
+  className = "",
+  children,
+}) => {
+  return (
+    <div
+      className={`relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.05] backdrop-blur-xl ${className}`}
     >
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-purple-500/10" />
       <div className="relative z-10">{children}</div>
@@ -210,48 +411,433 @@ const GlassCard: React.FC<{ className?: string; children: React.ReactNode }> = (
   );
 };
 
-const StatCard: React.FC<StatCardProps> = ({ label, value, footnote }) => {
-  return (
-    <GlassCard className="p-5 lg:p-6 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
-      <div className="text-xs uppercase tracking-[0.2em] text-slate-300 mb-3">
+const SoftDivider: React.FC<{ label?: string }> = ({ label }) => (
+  <div className="relative py-10 md:py-14">
+    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+    {label && (
+      <div className="relative mx-auto w-fit rounded-full border border-white/10 bg-black/40 px-3 py-1 text-[10px] uppercase tracking-[0.26em] text-slate-200">
         {label}
       </div>
-      <div className="text-3xl md:text-4xl font-semibold text-white mb-2">
-        {value}
-      </div>
-      {footnote && (
-        <p className="text-xs md:text-sm text-slate-300/90 leading-relaxed">
-          {footnote}
-        </p>
-      )}
-    </GlassCard>
-  );
-};
+    )}
+  </div>
+);
 
-const FundamentalBadge: React.FC<{ index: number; title: string }> = ({
-  index,
-  title,
-}) => {
-  return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-3 py-1 text-xs md:text-sm text-slate-100 shadow-lg shadow-purple-500/10">
-      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-sky-400 text-[10px] font-semibold text-white">
-        {index}
-      </span>
-      <span className="tracking-[0.16em] uppercase text-[10px] md:text-[11px] text-slate-200/90">
-        {title}
-      </span>
-    </div>
-  );
-};
+/* ----------------------------- UI Bits ----------------------------- */
 
 const TagPill: React.FC<PillProps> = ({ label, sub }) => {
   return (
-    <div className="group flex flex-col rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs md:text-sm text-slate-100/90 shadow-sm shadow-black/30 backdrop-blur-xl hover:-translate-y-0.5 hover:border-purple-400/40 hover:bg-white/10 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-300">
+    <div className="flex flex-col rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-xs md:text-sm text-slate-100/90 hover:border-white/14 hover:bg-white/[0.05] transition-colors">
       <span className="font-medium">{label}</span>
       {sub && <span className="text-slate-300/90 text-[11px] mt-1">{sub}</span>}
     </div>
   );
 };
+
+const PrimaryButton: React.FC<
+  React.PropsWithChildren<{
+    href: string;
+    className?: string;
+    ariaLabel?: string;
+  }>
+> = ({ href, className = "", ariaLabel, children }) => (
+  <a
+    href={href}
+    aria-label={ariaLabel}
+    className={`inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-purple-500 to-sky-400 px-4 md:px-5 py-2.5 text-xs md:text-sm font-medium text-white shadow-xl shadow-purple-500/35 hover:shadow-purple-400/55 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70 transition-all ${className}`}
+  >
+    {children}
+  </a>
+);
+
+const SecondaryButton: React.FC<
+  React.PropsWithChildren<{
+    onClick?: () => void;
+    href?: string;
+    className?: string;
+    ariaLabel?: string;
+  }>
+> = ({ onClick, href, className = "", ariaLabel, children }) => {
+  const Comp: any = href ? "a" : "button";
+  return (
+    <Comp
+      href={href}
+      onClick={onClick}
+      aria-label={ariaLabel}
+      className={`inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.035] px-3.5 py-2 text-xs md:text-sm font-medium text-slate-100 hover:bg-white/[0.06] hover:border-white/16 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 transition-all ${className}`}
+      type={href ? undefined : "button"}
+    >
+      {children}
+    </Comp>
+  );
+};
+
+const StatCard: React.FC<{
+  label: string;
+  value: string;
+  footnote?: string;
+  emphasis?: boolean;
+}> = ({ label, value, footnote, emphasis }) => {
+  return (
+    <SurfaceB
+      className={`p-5 lg:p-6 ${
+        emphasis ? "border-purple-300/20 bg-purple-500/[0.06]" : ""
+      }`}
+    >
+      <div className="text-[10px] md:text-xs uppercase tracking-[0.22em] text-slate-300 mb-3">
+        {label}
+      </div>
+      <div className="text-3xl md:text-4xl font-semibold text-white mb-2 tracking-tight">
+        {value}
+      </div>
+      {footnote && (
+        <p className="text-[11px] md:text-sm text-slate-300/90 leading-relaxed">
+          {footnote}
+        </p>
+      )}
+    </SurfaceB>
+  );
+};
+
+/* ----------------------------- Modal (Demo Video) ----------------------------- */
+
+const Modal: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+}> = ({ open, onClose, title, children }) => {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+    >
+      <button
+        onClick={onClose}
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        aria-label="Close modal"
+      />
+      <div className="relative w-full max-w-3xl">
+        <SurfaceC className="p-4 md:p-5">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <div className="text-sm md:text-base font-semibold text-white">
+                {title}
+              </div>
+              <div className="text-[11px] md:text-xs text-slate-300">
+                Short demo — how a session produces a reset plan.
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-200 hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+            >
+              Close
+            </button>
+          </div>
+          {children}
+        </SurfaceC>
+      </div>
+    </div>
+  );
+};
+
+/* ----------------------------- Chat Demo (More Real) ----------------------------- */
+
+const ChatBubble: React.FC<{ msg: ChatMessage }> = ({ msg }) => {
+  const isUser = msg.role === "user";
+  return (
+    <div className={`flex w-full gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
+      {!isUser && (
+        <div className="mt-1 flex h-7 w-7 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-sky-400 text-[11px] font-semibold text-white shrink-0">
+          BG
+        </div>
+      )}
+      <div
+        className={`max-w-[84%] rounded-2xl px-3.5 py-3 text-xs md:text-sm leading-relaxed shadow-md shadow-black/35 ${
+          isUser
+            ? "rounded-br-sm bg-white/90 text-slate-900"
+            : "rounded-bl-sm bg-slate-950/70 text-slate-100 border border-white/10"
+        }`}
+      >
+        <p className="whitespace-pre-wrap">{msg.text}</p>
+        {msg.meta && (
+          <div className="mt-1.5 text-[10px] md:text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span className="h-1 w-1 rounded-full bg-emerald-400" />
+            {msg.meta}
+          </div>
+        )}
+      </div>
+      {isUser && (
+        <div className="mt-1 flex h-7 w-7 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-[11px] font-semibold text-slate-50 shrink-0">
+          U
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ResetPlanCard: React.FC = () => {
+  return (
+    <div className="rounded-2xl border border-purple-300/20 bg-purple-500/[0.06] p-3.5 text-xs md:text-sm text-slate-100">
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <div className="text-[10px] uppercase tracking-[0.22em] text-slate-300">
+          Output: 10-second reset plan
+        </div>
+        <span className="text-[10px] text-slate-300">Saved to session</span>
+      </div>
+      <div className="grid gap-2 md:grid-cols-3">
+        <div className="rounded-xl border border-white/10 bg-black/30 p-2.5">
+          <div className="text-[10px] uppercase tracking-[0.18em] text-slate-300 mb-1">
+            Breath
+          </div>
+          <div className="font-medium">4–2–6 exhale</div>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-black/30 p-2.5">
+          <div className="text-[10px] uppercase tracking-[0.18em] text-slate-300 mb-1">
+            Cue
+          </div>
+          <div className="font-medium">“Next rep.”</div>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-black/30 p-2.5">
+          <div className="text-[10px] uppercase tracking-[0.18em] text-slate-300 mb-1">
+            Next action
+          </div>
+          <div className="font-medium">Eyes to target → commit</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ChatDemo: React.FC<{ onWatchDemo: () => void }> = ({ onWatchDemo }) => {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: 1,
+      role: "user",
+      text: "In practice I’m great, but in games I get tight after one mistake.",
+      meta: "Moment: after mistake",
+    },
+    {
+      id: 2,
+      role: "coach",
+      text:
+        "Good — we’re not fixing your talent, we’re fixing your response.\n\nTell me the exact trigger:\n• after a miss?\n• after coach reacts?\n• after the crowd shifts?",
+      meta: "Clarifying the trigger",
+    },
+    {
+      id: 3,
+      role: "user",
+      text: "After a miss. I feel my shoulders rise and my mind races.",
+      meta: "Body cue: tension",
+    },
+    {
+      id: 4,
+      role: "coach",
+      text:
+        "Perfect. Here’s your 10-second reset for that moment.\n\nRun it every time in practice so it shows up automatically in games.",
+      meta: "Generating a routine",
+    },
+  ]);
+
+  const [userInput, setUserInput] = useState("");
+  const [isThinking, setIsThinking] = useState(false);
+  const [showPlan, setShowPlan] = useState(true);
+  const [idCounter, setIdCounter] = useState(5);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages.length, isThinking, showPlan]);
+
+  const handlePromptClick = (prompt: string) => setUserInput(prompt);
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const trimmed = userInput.trim();
+    if (!trimmed || isThinking) return;
+
+    const userMessage: ChatMessage = { id: idCounter, role: "user", text: trimmed };
+    setIdCounter((p) => p + 1);
+    setMessages((prev) => [...prev, userMessage]);
+    setUserInput("");
+    setIsThinking(true);
+
+    setTimeout(() => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: idCounter + 1,
+          role: "coach",
+          text:
+            "Got you. We’ll map that to one skill and one routine.\n\nNext: What’s the *first* physical cue you notice (jaw, shoulders, breath, hands)?",
+          meta: "Next question",
+        },
+      ]);
+      setIdCounter((p) => p + 2);
+      setIsThinking(false);
+      setShowPlan(true);
+    }, 700);
+  };
+
+  return (
+    <SurfaceC className="p-4 md:p-5 lg:p-6 h-full flex flex-col">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="relative h-9 w-9 shrink-0">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500 to-sky-400 blur-md opacity-55" />
+            <div className="relative flex h-full w-full items-center justify-center rounded-2xl bg-slate-950 text-[11px] font-semibold text-white border border-white/10">
+              BG
+            </div>
+          </div>
+
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm text-slate-100">
+              <span className="font-medium">BGPT</span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/40 px-2 py-0.5 text-[10px] text-slate-200">
+                Demo preview
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] text-emerald-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Live-style flow
+              </span>
+            </div>
+            <p className="text-[11px] md:text-xs text-slate-300/90">
+              Built for pressure moments · outputs routines & scripts
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <SecondaryButton onClick={onWatchDemo} ariaLabel="Watch demo">
+            <span>Watch 45s</span>
+            <span className="text-base leading-none">▶</span>
+          </SecondaryButton>
+          <PrimaryButton href={OPEN_APP_URL} ariaLabel="Open BGPT app">
+            <span>Open BGPT</span>
+            <span className="text-lg leading-none">↗</span>
+          </PrimaryButton>
+        </div>
+      </div>
+
+      <div className="relative mb-3 flex-1 overflow-hidden rounded-2xl border border-white/8 bg-black/35">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(168,85,247,0.18),transparent_55%),radial-gradient(circle_at_bottom,_rgba(56,189,248,0.10),transparent_55%)] opacity-90" />
+
+        <div className="relative z-10 flex h-full flex-col">
+          <div className="flex items-center justify-between border-b border-white/8 px-3 py-2 text-[10px] text-slate-300/90 bg-black/30">
+            <div className="flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-red-500/80" />
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-400/80" />
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/80" />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-white/[0.04] px-2 py-0.5 border border-white/10">
+                Output: routine
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowPlan((s) => !s)}
+                className="rounded-full bg-white/[0.04] px-2 py-0.5 border border-white/10 hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+              >
+                {showPlan ? "Hide output" : "Show output"}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
+            {messages.map((msg) => (
+              <ChatBubble key={msg.id} msg={msg} />
+            ))}
+
+            {showPlan && <ResetPlanCard />}
+
+            {isThinking && (
+              <div className="flex items-center gap-2 text-[11px] text-slate-300 mt-2">
+                <div className="h-6 w-6 rounded-xl border border-white/10 bg-slate-950/60 flex items-center justify-center">
+                  <span className="flex gap-0.5">
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300 [animation-delay:0.12s]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300 [animation-delay:0.24s]" />
+                  </span>
+                </div>
+                <span>Building your next prompt…</span>
+              </div>
+            )}
+
+            <div ref={bottomRef} />
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-3 grid grid-cols-2 gap-2 md:flex md:flex-wrap">
+        {QUICK_PROMPTS.map((prompt, index) => (
+          <button
+            key={prompt}
+            type="button"
+            onClick={() => handlePromptClick(prompt)}
+            className="group flex-1 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] md:text-xs text-left text-slate-200/90 hover:bg-white/[0.06] hover:border-white/16 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 transition-all"
+          >
+            <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-slate-300/80">
+              <span className="h-1 w-1 rounded-full bg-slate-400/80" />
+              <span>
+                {index === 0
+                  ? "Pressure"
+                  : index === 1
+                  ? "Mistakes"
+                  : index === 2
+                  ? "Overthinking"
+                  : "Confidence"}
+              </span>
+            </div>
+            <span className="line-clamp-2 group-hover:line-clamp-none">
+              {prompt}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <form
+        onSubmit={handleSubmit}
+        className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/40 px-3 py-2 md:px-3.5 md:py-2.5"
+      >
+        <input
+          type="text"
+          placeholder="Describe the moment you tighten…"
+          className="flex-1 bg-transparent text-xs md:text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+          value={userInput}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => setUserInput(e.target.value)}
+        />
+        <button
+          type="submit"
+          disabled={!userInput.trim() || isThinking}
+          className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-br from-purple-500 to-sky-400 px-3 py-1.5 text-[11px] md:text-xs font-medium text-white shadow-lg shadow-purple-500/25 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70"
+        >
+          <span>Ask</span>
+          <span className="text-[15px] leading-none">↗</span>
+        </button>
+      </form>
+
+      {/* Reduced disclaimer intensity (only where needed) */}
+      <p className="mt-2 text-[10px] text-slate-400 leading-relaxed">
+        Performance coaching only. Not for emergencies.
+      </p>
+    </SurfaceC>
+  );
+};
+
+/* ----------------------------- Sections ----------------------------- */
 
 const Section: React.FC<SectionProps> = ({
   id,
@@ -260,6 +846,7 @@ const Section: React.FC<SectionProps> = ({
   kicker,
   children,
   align = "left",
+  tone = "quiet",
 }) => {
   const { ref, inView } = useInView<HTMLDivElement>();
   const isCenter = align === "center";
@@ -268,13 +855,16 @@ const Section: React.FC<SectionProps> = ({
     <section
       id={id}
       ref={ref}
-      className="relative py-16 md:py-24 lg:py-28"
+      className={`relative py-16 md:py-24 lg:py-28 ${
+        tone === "loud" ? "overflow-hidden" : ""
+      }`}
     >
-      <div
-        className={`pointer-events-none absolute inset-x-0 top-0 h-full bg-gradient-to-b from-white/5 via-transparent to-transparent opacity-0 ${
-          inView ? "animate-[fadeInSoft_1.2s_ease-out_forwards]" : ""
-        }`}
-      />
+      {tone === "loud" && (
+        <div className="pointer-events-none absolute inset-0 opacity-60">
+          <FocusWaves className="absolute -top-6 left-1/2 w-[900px] -translate-x-1/2 text-sky-300/40" />
+        </div>
+      )}
+
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <header
           className={`mb-10 md:mb-14 lg:mb-16 ${
@@ -282,24 +872,28 @@ const Section: React.FC<SectionProps> = ({
           }`}
         >
           {eyebrow && (
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] md:text-xs uppercase tracking-[0.25em] text-slate-200/90 shadow-md shadow-purple-500/20">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] md:text-xs uppercase tracking-[0.25em] text-slate-200/90">
               <span className="h-1 w-1 rounded-full bg-gradient-to-br from-purple-500 to-sky-400" />
               <span>{eyebrow}</span>
             </div>
           )}
+
+          {/* Unique type move: tighter tracking + slightly larger + controlled gradient */}
           <h2
-            className={`text-2xl md:text-3xl lg:text-4xl font-semibold tracking-tight text-white ${
+            className={`text-2xl md:text-3xl lg:text-4xl font-semibold tracking-[-0.02em] text-white ${
               isCenter ? "mx-auto" : ""
             }`}
           >
             {title}
           </h2>
+
           {kicker && (
             <p className="mt-3 md:mt-4 text-sm md:text-base text-slate-200/90 leading-relaxed">
               {kicker}
             </p>
           )}
         </header>
+
         <div
           className={`${
             inView
@@ -314,256 +908,14 @@ const Section: React.FC<SectionProps> = ({
   );
 };
 
-const HeroChatBubble: React.FC<{ msg: ChatMessage }> = ({ msg }) => {
-  const isUser = msg.role === "user";
-
-  return (
-    <div
-      className={`flex w-full gap-3 md:gap-4 ${
-        isUser ? "justify-end" : "justify-start"
-      }`}
-    >
-      {!isUser && (
-        <div className="mt-1 flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-sky-400 text-[11px] font-semibold text-white shrink-0">
-          BG
-        </div>
-      )}
-      <div
-        className={`max-w-[82%] rounded-2xl px-3.5 py-3 text-xs md:text-sm leading-relaxed shadow-md shadow-black/40 ${
-          isUser
-            ? "rounded-br-sm bg-white/90 text-slate-900"
-            : "rounded-bl-sm bg-slate-900/80 text-slate-100 border border-white/10"
-        }`}
-      >
-        <p>{msg.text}</p>
-        {msg.meta && (
-          <div className="mt-1.5 text-[10px] md:text-[11px] text-slate-400 flex items-center gap-1.5">
-            <span className="h-1 w-1 rounded-full bg-emerald-400" />
-            {msg.meta}
-          </div>
-        )}
-      </div>
-      {isUser && (
-        <div className="mt-1 flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/10 text-[11px] font-semibold text-slate-50 shrink-0">
-          U
-        </div>
-      )}
-    </div>
-  );
-};
-
-const HeroChatPanel: React.FC = () => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 1,
-      role: "user",
-      text: "I play great in practice, but in games I get tight and play small.",
-      meta: "Pressure · Performance dip",
-    },
-    {
-      id: 2,
-      role: "coach",
-      text:
-        "Got it — you’re not broken, your mental game is under-trained.\n\n" +
-        "Let’s zoom in on the moment things start to tighten. Is it:\n" +
-        "• Right before competition?\n" +
-        "• After your first mistake?\n" +
-        "• When the game is on the line?",
-      meta: "Linking to Presence · Perspective",
-    },
-    {
-      id: 3,
-      role: "coach",
-      text:
-        "Once we know *that* moment, we’ll build a 3-step reset so your body knows what to do even when your mind panics.",
-    },
-  ]);
-  const [userInput, setUserInput] = useState("");
-  const [isThinking, setIsThinking] = useState(false);
-  const [idCounter, setIdCounter] = useState(4);
-  const bottomRef = useRef<HTMLDivElement | null>(null);
-
-  const handlePromptClick = (prompt: string) => {
-    setUserInput(prompt);
-  };
-
-  const scrollToBottom = () => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages.length, isThinking]);
-
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    const trimmed = userInput.trim();
-    if (!trimmed || isThinking) return;
-
-    const userMessage: ChatMessage = {
-      id: idCounter,
-      role: "user",
-      text: trimmed,
-    };
-
-    setIdCounter((prev) => prev + 1);
-    setMessages((prev) => [...prev, userMessage]);
-    setUserInput("");
-    setIsThinking(true);
-
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: idCounter + 1,
-          role: "coach",
-          text:
-            "Thanks for being honest — that’s already you practicing Presence.\n\n" +
-            "If we break your situation into the 5 Fundamentals, here’s where I’d start:\n\n" +
-            "1. **Presence** – We’ll design a breathing + focus cue for the exact moment you start to tighten.\n" +
-            "2. **Perspective** – We’ll zoom out so your whole identity isn’t riding on today’s game.\n" +
-            "3. **Preparation** – You’ll build a short pre-game script so your body knows you’re ready.\n\n" +
-            "If you were competing tonight, which one feels most urgent: getting present, handling fear of mistakes, or rebuilding confidence?",
-          meta: "Applies the 5 Fundamentals framework",
-        },
-      ]);
-      setIdCounter((prev) => prev + 2);
-      setIsThinking(false);
-    }, 900);
-  };
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setUserInput(e.target.value);
-  };
-
-  return (
-    <GlassCard className="p-4 md:p-5 lg:p-6 h-full flex flex-col">
-      <div className="flex items-center justify-between mb-3 md:mb-4">
-        <div className="flex items-center gap-2.5">
-          <div className="relative h-8 w-8">
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500 to-sky-400 blur-sm opacity-70" />
-            <div className="relative flex h-full w-full items-center justify-center rounded-2xl bg-slate-950 text-[11px] font-semibold text-white border border-white/10">
-              BG
-            </div>
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5 text-xs md:text-sm text-slate-100">
-              <span className="font-medium">Dr. Brett GPT</span>
-              <span className="text-[10px] text-emerald-400 flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Live coach mode
-              </span>
-            </div>
-            <p className="text-[11px] md:text-xs text-slate-300/90">
-              Mental game coach · not therapy · for athletes 16+
-            </p>
-          </div>
-        </div>
-        <div className="hidden sm:flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 text-[10px] text-slate-200 border border-white/10">
-          <span className="h-1.5 w-1.5 rounded-full bg-gradient-to-br from-purple-500 to-sky-400" />
-          <span>Powered by The 5 Fundamentals</span>
-        </div>
-      </div>
-
-      <div className="relative mb-3 md:mb-4 flex-1 overflow-hidden rounded-2xl border border-white/8 bg-black/40">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(168,85,247,0.22),transparent_55%),radial-gradient(circle_at_bottom,_rgba(56,189,248,0.12),transparent_55%)] opacity-90" />
-        <div className="relative z-10 flex h-full flex-col">
-          <div className="flex items-center justify-between border-b border-white/8 px-3 py-2 text-[10px] text-slate-300/90 bg-black/40">
-            <div className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-red-500/80" />
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400/80" />
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/80" />
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] text-emerald-300 border border-emerald-500/30">
-                Performance only
-              </span>
-              <span className="rounded-full bg-slate-800/80 px-2 py-0.5 text-[9px] text-slate-300 border border-white/10">
-                Not for crisis or therapy
-              </span>
-            </div>
-          </div>
-
-          <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3 text-[13px] md:text-sm">
-            {messages.map((msg) => (
-              <HeroChatBubble key={msg.id} msg={msg} />
-            ))}
-            {isThinking && (
-              <div className="flex items-center gap-2 text-[11px] text-slate-300 mt-2">
-                <div className="h-6 w-6 rounded-xl border border-white/10 bg-slate-900/80 flex items-center justify-center">
-                  <span className="flex gap-0.5">
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300" />
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300 [animation-delay:0.12s]" />
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300 [animation-delay:0.24s]" />
-                  </span>
-                </div>
-                <span>BGPT is mapping your situation to the 5 Fundamentals…</span>
-              </div>
-            )}
-            <div ref={bottomRef} />
-          </div>
-        </div>
-      </div>
-
-      <div className="mb-3 grid grid-cols-2 gap-2 md:flex md:flex-wrap">
-        {QUICK_PROMPTS.map((prompt, index) => (
-          <button
-            key={prompt}
-            type="button"
-            onClick={() => handlePromptClick(prompt)}
-            className="group flex-1 rounded-2xl border border-white/12 bg-white/5 px-3 py-2 text-[11px] md:text-xs text-left text-slate-200/90 hover:border-purple-400/40 hover:bg-white/10 hover:-translate-y-0.5 transition-all duration-200"
-          >
-            <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-slate-300/80">
-              <span className="h-1 w-1 rounded-full bg-slate-400/80" />
-              <span>{index === 0 ? "Pressure" : index === 1 ? "Mistakes" : index === 2 ? "Overthinking" : "Confidence"}</span>
-            </div>
-            <span className="line-clamp-2 group-hover:line-clamp-none">
-              {prompt}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      <form
-        onSubmit={handleSubmit}
-        className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/60 px-3 py-2 md:px-3.5 md:py-2.5"
-      >
-        <input
-          type="text"
-          placeholder="Share what’s actually going on in your game…"
-          className="flex-1 bg-transparent text-xs md:text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
-          value={userInput}
-          onChange={handleChange}
-        />
-        <button
-          type="submit"
-          disabled={!userInput.trim() || isThinking}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-br from-purple-500 to-sky-400 px-3 py-1.5 text-[11px] md:text-xs font-medium text-white shadow-lg shadow-purple-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <span>Try a coaching reply</span>
-          <span className="text-[15px] leading-none">↗</span>
-        </button>
-      </form>
-      <p className="mt-2 text-[10px] text-slate-400 leading-relaxed">
-        BGPT is a performance coach, not a therapist, doctor, or emergency
-        service. If you’re in crisis, contact local support immediately.
-      </p>
-    </GlassCard>
-  );
-};
-
-const HeroSection: React.FC = () => {
+const HeroSection: React.FC<{ onWatchDemo: () => void }> = ({ onWatchDemo }) => {
   const scrollProgress = useScrollProgress();
 
   const heroBackgroundStyle = useMemo<React.CSSProperties>(() => {
-    const hue = 260 + scrollProgress * 60;
-    const y = scrollProgress * 80;
-    const scale = 1 + scrollProgress * 0.06;
-
+    const y = scrollProgress * 60;
     return {
-      "--hero-hue": hue.toString(),
-      transform: `translateY(${y}px) scale(${scale})`,
-    } as React.CSSProperties;
+      transform: `translateY(${y}px)`,
+    };
   }, [scrollProgress]);
 
   const { ref, inView } = useInView<HTMLDivElement>();
@@ -573,18 +925,26 @@ const HeroSection: React.FC = () => {
       ref={ref}
       className="relative overflow-hidden pb-16 pt-20 md:pt-24 lg:pt-28 lg:pb-24"
     >
+      {/* Background: less blur overall (performance), more identity via field lines + waves */}
       <div
-        className="pointer-events-none absolute inset-0 opacity-90 transition-transform duration-700 ease-out"
+        className="pointer-events-none absolute inset-0 opacity-95 transition-transform duration-700 ease-out"
         style={heroBackgroundStyle}
       >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,1)_0,rgba(15,23,42,0.92)_35%,rgba(15,23,42,1)_100%)]" />
-        <div className="absolute -top-64 left-1/2 h-[480px] w-[480px] -translate-x-1/2 rounded-full bg-[conic-gradient(from_190deg_at_50%_50%,_rgba(129,140,248,0.1),_rgba(96,165,250,0.4),_rgba(244,114,182,0.28),_rgba(129,140,248,0.16))] blur-3xl opacity-80" />
-        <div className="absolute -bottom-32 -left-32 h-[340px] w-[340px] rounded-full bg-[radial-gradient(circle_at_30%_80%,rgba(56,189,248,0.25),transparent_60%)] blur-3xl opacity-70" />
-        <div className="absolute -bottom-40 -right-10 h-[360px] w-[360px] rounded-full bg-[radial-gradient(circle_at_70%_20%,rgba(168,85,247,0.35),transparent_60%)] blur-3xl opacity-70" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,_rgba(15,23,42,0.3),rgba(15,23,42,0.95))]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,1)_0,rgba(15,23,42,0.90)_40%,rgba(15,23,42,1)_100%)]" />
+
+        {/* Field line motif */}
+        <div className="absolute inset-0 opacity-[0.18] [background-image:linear-gradient(to_right,rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:84px_84px]" />
+
+        {/* Color energy (reduced blur usage) */}
+        <div className="absolute -top-56 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-[conic-gradient(from_210deg_at_50%_50%,_rgba(129,140,248,0.10),_rgba(96,165,250,0.24),_rgba(244,114,182,0.14),_rgba(129,140,248,0.10))] opacity-70" />
+        <div className="absolute -bottom-44 -left-20 h-[360px] w-[360px] rounded-full bg-[radial-gradient(circle_at_30%_80%,rgba(56,189,248,0.16),transparent_60%)] opacity-80" />
+        <div className="absolute -bottom-52 -right-8 h-[380px] w-[380px] rounded-full bg-[radial-gradient(circle_at_70%_20%,rgba(168,85,247,0.22),transparent_60%)] opacity-80" />
+
+        <FocusWaves className="absolute top-10 left-1/2 w-[1000px] -translate-x-1/2 text-purple-300/30" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,_rgba(15,23,42,0.35),rgba(15,23,42,0.95))]" />
       </div>
 
-      <div className="relative mx-auto flex max-w-6xl flex-col gap-12 px-4 sm:px-6 lg:flex-row lg:items-center lg:gap-10 lg:px-8">
+      <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-4 sm:px-6 lg:flex-row lg:items-center lg:gap-12 lg:px-8">
         <div
           className={`flex-1 ${
             inView
@@ -592,67 +952,74 @@ const HeroSection: React.FC = () => {
               : "opacity-0 translate-y-6"
           }`}
         >
-          <div className="inline-flex items-center gap-2 rounded-full bg-black/60 px-2.5 py-1 border border-white/10 mb-4 shadow-lg shadow-black/30">
+          <div className="inline-flex items-center gap-2 rounded-full bg-black/45 px-2.5 py-1 border border-white/10 mb-4">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-[10px] uppercase tracking-[0.22em] text-slate-200/90">
-              Mental Game · For Athletes 16+
-            </span>
-            <span className="hidden sm:inline-flex h-5 items-center rounded-full bg-white/5 px-2 text-[10px] text-slate-200/90 border border-white/10">
-              Not therapy · Performance focused
+              Mental Performance · Athletes 16+
             </span>
           </div>
-          <h1 className="text-3xl md:text-4xl lg:text-5xl leading-tight md:leading-[1.1] tracking-tight text-white font-semibold">
+
+          {/* Punch line + supporting line (improved hierarchy) */}
+          <h1 className="text-3xl md:text-5xl leading-[1.06] tracking-[-0.03em] text-white font-semibold">
             Turn pressure into{" "}
-            <span className="bg-gradient-to-br from-sky-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-              your advantage
+            <span className="bg-gradient-to-br from-sky-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
+              execution
             </span>
-            , not your enemy.
+            .
           </h1>
-          <p className="mt-4 md:mt-5 text-sm md:text-base text-slate-200/90 leading-relaxed max-w-xl">
-            Dr. Brett GPT (BGPT) is your 24/7 mental performance coach — modeled
-            after decades of work with elite athletes and high performers.
-            Grounded in the{" "}
-            <span className="font-semibold text-slate-50">
-              5 Fundamentals of the Mental Game
-            </span>
-            , BGPT helps you handle pressure, rebuild confidence, and compete
-            with freedom again.
+
+          <p className="mt-3 md:mt-4 text-sm md:text-base text-slate-200/90 leading-relaxed max-w-xl">
+            BGPT helps you handle the exact moment you tighten — and gives you a
+            routine you can run{" "}
+            <span className="font-semibold text-slate-50">tonight</span>.
           </p>
 
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <a
-              href="#start"
-              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-br from-purple-500 to-sky-400 px-4 md:px-5 py-2.5 text-xs md:text-sm font-medium text-white shadow-xl shadow-purple-500/40 hover:shadow-purple-400/60 hover:-translate-y-0.5 transition-all duration-200"
-            >
-              <span>Start your first mental rep</span>
-              <span className="text-lg leading-none">↗</span>
-            </a>
-            <a
-              href="#how-it-works"
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs md:text-sm font-medium text-slate-100 hover:border-purple-300/40 hover:bg-white/10 hover:-translate-y-0.5 transition-all duration-200"
-            >
-              <span>See the 5 Fundamentals framework</span>
-            </a>
+          {/* Above-the-fold micro promise (conversion clarity) */}
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] md:text-xs text-slate-300">
+            <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1">
+              Describe the moment
+            </span>
+            <span className="text-slate-500">→</span>
+            <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1">
+              Get a reset routine
+            </span>
+            <span className="text-slate-500">→</span>
+            <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1">
+              Use it in your next rep
+            </span>
           </div>
 
-          <div className="mt-6 md:mt-7 grid grid-cols-2 gap-2.5 md:flex md:flex-wrap md:gap-3">
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <PrimaryButton href={OPEN_APP_URL} ariaLabel="Try BGPT now">
+              <span>Try BGPT now</span>
+              <span className="text-lg leading-none">↗</span>
+            </PrimaryButton>
+
+            <SecondaryButton onClick={onWatchDemo} ariaLabel="Watch demo">
+              <span>Watch 45s demo</span>
+              <span className="text-base leading-none">▶</span>
+            </SecondaryButton>
+          </div>
+
+          <div className="mt-6 grid grid-cols-2 gap-2.5 md:flex md:flex-wrap md:gap-3">
             {PILLARS.map((pill) => (
               <TagPill key={pill.label} {...pill} />
             ))}
           </div>
 
-          <div className="mt-6 md:mt-7 flex flex-wrap items-center gap-4">
-            <div className="flex -space-x-2">
-              <div className="h-7 w-7 rounded-full border border-slate-900 bg-gradient-to-br from-sky-400 to-purple-500" />
-              <div className="h-7 w-7 rounded-full border border-slate-900 bg-gradient-to-br from-emerald-400 to-cyan-400" />
-              <div className="h-7 w-7 rounded-full border border-slate-900 bg-gradient-to-br from-amber-400 to-rose-400" />
+          {/* Trust chips (grounding) */}
+          <div className="mt-6 md:mt-7 flex flex-wrap items-center gap-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/35 px-3 py-1.5 text-[11px] text-slate-200">
+              <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
+              Outputs: scripts · routines · plans
             </div>
-            <div className="text-[11px] md:text-xs text-slate-300 leading-snug max-w-xs">
-              Trusted by{" "}
-              <span className="font-semibold text-slate-50">
-                5,000+ athletes & performers
-              </span>{" "}
-              across college, pro, and high-pressure careers.
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/35 px-3 py-1.5 text-[11px] text-slate-200">
+              <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />
+              Built for pressure moments
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/35 px-3 py-1.5 text-[11px] text-slate-200">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              Private sessions
             </div>
           </div>
         </div>
@@ -660,11 +1027,11 @@ const HeroSection: React.FC = () => {
         <div
           className={`flex-1 lg:max-w-md xl:max-w-lg ${
             inView
-              ? "animate-[slideUpSoft_1.1s_ease-out_forwards]"
+              ? "animate-[slideUpSoft_1.05s_ease-out_forwards]"
               : "opacity-0 translate-y-8"
           }`}
         >
-          <HeroChatPanel />
+          <ChatDemo onWatchDemo={onWatchDemo} />
         </div>
       </div>
     </section>
@@ -672,77 +1039,182 @@ const HeroSection: React.FC = () => {
 };
 
 const StatsSection: React.FC = () => {
+  const { ref, inView } = useInView<HTMLDivElement>();
+  const perfLift = useCountUp(12, inView, 950);
+  const athletes = useCountUp(5000, inView, 950);
+  const sessions = useCountUp(70000, inView, 1050);
+
+  return (
+    <section ref={ref} id="results" className="relative py-16 md:py-24 lg:py-28">
+      <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="max-w-2xl">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] md:text-xs uppercase tracking-[0.25em] text-slate-200/90">
+            <span className="h-1 w-1 rounded-full bg-gradient-to-br from-purple-500 to-sky-400" />
+            Proof & traction
+          </div>
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-semibold tracking-[-0.02em] text-white">
+            Real shifts — not just motivation.
+          </h2>
+          <p className="mt-3 text-sm md:text-base text-slate-200/90 leading-relaxed">
+            Numbers are only useful if they’re grounded. Keep your measurement
+            simple, transparent, and honest.
+          </p>
+        </div>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-3 md:gap-5 lg:gap-6">
+          <StatCard
+            label="Average performance lift"
+            value={`+${perfLift}%`}
+            footnote="+12% = self-reported performance marker after 6–8 weeks (add n=___)."
+            emphasis
+          />
+          <StatCard
+            label="Athletes & performers"
+            value={`${athletes.toLocaleString()}+`}
+            footnote="Across multiple sports and high-pressure roles."
+          />
+          <StatCard
+            label="Sessions informed"
+            value={`${sessions.toLocaleString()}+`}
+            footnote="Used to refine prompts, routines, and flows."
+          />
+        </div>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-[1.2fr,1fr] items-stretch">
+          {/* Tier B panel (NOT glass) to break the “box rhythm” */}
+          <SurfaceB className="p-5 md:p-6">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.22em] text-slate-300 mb-1">
+                  Stories (privacy preserved)
+                </div>
+                <div className="text-sm md:text-base font-semibold text-white">
+                  Names changed. Scenarios real.
+                </div>
+              </div>
+              <span className="text-[11px] text-slate-300">
+                Keep details anonymous, keep the results honest.
+              </span>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="rounded-2xl bg-black/30 border border-white/10 px-3.5 py-3 text-xs text-slate-100 leading-relaxed">
+                <div className="mb-2 text-[10px] uppercase tracking-[0.18em] text-slate-400">
+                  Before
+                </div>
+                <p>
+                  “One mistake and I’d go into protection mode. I stopped
+                  attacking and started surviving.”
+                </p>
+              </div>
+              <div className="rounded-2xl bg-purple-500/[0.07] border border-purple-300/20 px-3.5 py-3 text-xs text-slate-100 leading-relaxed">
+                <div className="mb-2 text-[10px] uppercase tracking-[0.18em] text-slate-300">
+                  After (with reps)
+                </div>
+                <p>
+                  “Pressure still shows up, but I have a routine. I recover in
+                  seconds instead of spiraling for minutes.”
+                </p>
+              </div>
+            </div>
+          </SurfaceB>
+
+          <div className="space-y-3 md:space-y-4">
+            <SurfaceB className="p-5">
+              <p className="text-sm text-slate-200/90 leading-relaxed">
+                Built for athletes who want{" "}
+                <span className="font-semibold text-white">execution tools</span>{" "}
+                — not hype.
+              </p>
+            </SurfaceB>
+            <SurfaceB className="p-5">
+              <p className="text-[11px] md:text-sm text-slate-300 leading-relaxed">
+                Credibility block goes here (coach credentials, methodology
+                note, team/university logos if you have them).
+              </p>
+            </SurfaceB>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const MomentsSection: React.FC = () => {
   return (
     <Section
-      id="results"
-      eyebrow="Proof of change"
-      title="Real shifts in the mental game — not just motivation."
-      kicker="BGPT is informed by thousands of real coaching conversations. The goal isn’t to hype you up, it’s to change how you show up under pressure."
+      id="moments"
+      eyebrow="Moments we train"
+      title="Athletes don’t buy motivation — they buy help for the exact moment."
+      kicker="Pick the moment. BGPT outputs a routine or script you can rehearse in practice until it shows up under pressure."
+      align="left"
+      tone="loud"
+    >
+      <div className="grid gap-4 md:grid-cols-2">
+        {MOMENTS.map((m) => (
+          <SurfaceB key={m.title} className="p-5 md:p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm md:text-base font-semibold text-white">
+                  {m.title}
+                </div>
+                <p className="mt-1 text-[11px] md:text-sm text-slate-200/90 leading-relaxed">
+                  {m.moment}
+                </p>
+              </div>
+              <div className="shrink-0 rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] text-slate-200">
+                Tool: <span className="font-semibold text-white">{m.tool}</span>
+              </div>
+            </div>
+            <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-3 text-[11px] md:text-sm text-slate-200/90">
+              <span className="text-slate-300 uppercase tracking-[0.18em] text-[10px]">
+                Output
+              </span>
+              <div className="mt-1 font-medium text-slate-50">{m.output}</div>
+            </div>
+          </SurfaceB>
+        ))}
+      </div>
+    </Section>
+  );
+};
+
+const DeliverablesSection: React.FC = () => {
+  return (
+    <Section
+      id="deliverables"
+      eyebrow="What you get"
+      title="In 10 minutes, you leave with something usable."
+      kicker="This is the difference between a nice conversation and actual training: a routine you can run on the field."
       align="center"
     >
-      <div className="grid gap-4 md:grid-cols-3 md:gap-5 lg:gap-6">
-        {STAT_CARDS.map((card) => (
-          <StatCard key={card.label} {...card} />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {DELIVERABLES.map((d) => (
+          <SurfaceB key={d.title} className="p-5 md:p-6">
+            <div className="text-sm md:text-base font-semibold text-white">
+              {d.title}
+            </div>
+            <p className="mt-2 text-[11px] md:text-sm text-slate-200/90 leading-relaxed">
+              {d.description}
+            </p>
+            <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-3 text-[11px] md:text-sm text-slate-200/90">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-slate-300 mb-1">
+                Example
+              </div>
+              <div className="text-slate-50 font-medium">{d.example}</div>
+            </div>
+          </SurfaceB>
         ))}
       </div>
 
-      <div className="mt-6 md:mt-8 grid gap-4 md:grid-cols-[1.2fr,1fr] items-stretch">
-        <GlassCard className="p-4 md:p-5 lg:p-6">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <div className="flex items-center gap-2">
-              <FundamentalBadge index={1} title="Performance Stories" />
-            </div>
-            <span className="text-[10px] md:text-xs text-slate-300">
-              Composite examples · Not real names
-            </span>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-2xl bg-black/40 border border-white/10 px-3.5 py-3 text-xs text-slate-100 leading-relaxed shadow-inner shadow-black/60">
-              <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-slate-400">
-                Before BGPT
-              </div>
-              <p>
-                “I’d go cold the second the game mattered. I knew I was good
-                enough, but my body would freeze and I’d play not to lose.”
-              </p>
-            </div>
-            <div className="rounded-2xl bg-gradient-to-br from-sky-500/10 via-purple-500/10 to-rose-500/10 border border-purple-300/30 px-3.5 py-3 text-xs text-slate-100 leading-relaxed shadow-lg shadow-purple-500/30">
-              <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-slate-200">
-                After 6–8 weeks
-              </div>
-              <p>
-                “I still feel nerves, but now I know exactly what to do. I
-                expect pressure — and I have a reset plan instead of a meltdown.”
-              </p>
-            </div>
-          </div>
-        </GlassCard>
-
-        <div className="space-y-3 md:space-y-4">
-          <GlassCard className="p-4 md:p-5">
-            <div className="flex items-baseline justify-between gap-2">
-              <p className="text-xs text-slate-200/90 leading-relaxed">
-                Designed for{" "}
-                <span className="font-semibold text-white">
-                  serious athletes & high performers
-                </span>{" "}
-                who want tools they can actually use in training and
-                competition, not just feel-good quotes.
-              </p>
-            </div>
-          </GlassCard>
-          <GlassCard className="p-4 md:p-5">
-            <p className="text-[11px] md:text-xs text-slate-300 leading-relaxed">
-              BGPT does not diagnose, treat, or replace therapy. It helps you
-              train the{" "}
-              <span className="font-semibold text-slate-50">
-                performance side
-              </span>{" "}
-              of your mind — the same way strength & conditioning trains your
-              body.
-            </p>
-          </GlassCard>
-        </div>
+      <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+        <PrimaryButton href={OPEN_APP_URL} ariaLabel="Try BGPT now">
+          <span>Try BGPT now</span>
+          <span className="text-lg leading-none">↗</span>
+        </PrimaryButton>
+        <SecondaryButton href="#faq" ariaLabel="Read FAQ">
+          <span>Read FAQ</span>
+        </SecondaryButton>
       </div>
     </Section>
   );
@@ -751,182 +1223,204 @@ const StatsSection: React.FC = () => {
 const FrameworkSection: React.FC = () => {
   return (
     <Section
-      id="how-it-works"
-      eyebrow="The Fundamentals"
-      title="The 5 Fundamentals of the Mental Game."
-      kicker="Every conversation with BGPT intentionally maps back to these fundamentals — so you’re not just talking, you’re building a repeatable framework for pressure."
+      id="framework"
+      eyebrow="Core framework"
+      title="A framework is useful only if it becomes automatic."
+      kicker="BGPT uses a simple structure to turn messy pressure into clear routines. Keep it balanced: enough structure to guide, not so much it feels preachy."
       align="left"
     >
       <div className="grid gap-6 md:grid-cols-[1.15fr,1fr] items-start">
         <div className="space-y-4">
-          {FUNDAMENTALS.map((item, index) => (
-            <GlassCard
-              key={item.title}
-              className="p-4 md:p-5 lg:p-5.5 group hover:-translate-y-1 hover:shadow-2xl hover:shadow-purple-500/30 transition-all duration-300"
-            >
+          {CORE_FRAMEWORK.map((item, idx) => (
+            <SurfaceB key={item.title} className="p-5 md:p-6">
               <div className="flex items-start gap-3 md:gap-4">
                 <div className="mt-0.5">
-                  <FundamentalBadge index={index + 1} title={item.title} />
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/35 px-3 py-1 text-xs text-slate-100">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-sky-400 text-[10px] font-semibold text-white">
+                      {idx + 1}
+                    </span>
+                    <span className="tracking-[0.16em] uppercase text-[10px] text-slate-200/90">
+                      {item.title}
+                    </span>
+                  </div>
                 </div>
                 <div>
                   <h3 className="text-sm md:text-base font-semibold text-white mb-1.5">
                     {item.tagline}
                   </h3>
-                  <p className="text-xs md:text-sm text-slate-200/90 leading-relaxed">
+                  <p className="text-[11px] md:text-sm text-slate-200/90 leading-relaxed">
                     {item.description}
                   </p>
                 </div>
               </div>
-            </GlassCard>
+            </SurfaceB>
           ))}
         </div>
 
-        <GlassCard className="p-4 md:p-5 lg:p-6 sticky md:top-24">
-          <h3 className="text-sm md:text-base font-semibold text-white mb-2">
-            What a session with BGPT actually looks like
-          </h3>
-          <p className="text-xs md:text-sm text-slate-200/90 leading-relaxed mb-3">
-            Instead of “How are you feeling?”, BGPT will ask targeted,
-            framework-driven questions:
-          </p>
-          <ul className="space-y-2.5 text-xs md:text-sm text-slate-200/90">
-            <li className="flex gap-2">
-              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-sky-400" />
-              <div>
-                <span className="font-semibold">Presence</span>: “Walk me
-                through the exact moment your mind jumps ahead or back. What are
-                you saying to yourself right there?”
-              </div>
-            </li>
-            <li className="flex gap-2">
-              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-purple-400" />
-              <div>
-                <span className="font-semibold">Perspective</span>: “If we
-                zoomed out 12 months, how important is this exact game to your
-                long-term story?”
-              </div>
-            </li>
-            <li className="flex gap-2">
-              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              <div>
-                <span className="font-semibold">Preparation</span>: “What does
-                your mind do in the 60 minutes before you compete? Where can we
-                install a better routine?”
-              </div>
-            </li>
-          </ul>
-          <p className="mt-3 text-[11px] md:text-xs text-slate-400 leading-relaxed">
-            Over time, those questions turn into your own inner coaching voice —
-            so you don’t just rely on BGPT, you become your own mental coach.
-          </p>
-        </GlassCard>
+        {/* Sticky panel is now Tier B (subtle), not glass */}
+        <div className="sticky md:top-24">
+          <SurfaceB className="p-5 md:p-6">
+            <h3 className="text-sm md:text-base font-semibold text-white mb-2">
+              What a session actually does
+            </h3>
+            <p className="text-[11px] md:text-sm text-slate-200/90 leading-relaxed mb-3">
+              Not “How do you feel?” — it’s “Where exactly does it break, and
+              what’s the routine for that moment?”
+            </p>
+
+            <ul className="space-y-2.5 text-[11px] md:text-sm text-slate-200/90">
+              <li className="flex gap-2">
+                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-sky-400" />
+                <div>
+                  Identify your <span className="font-semibold">trigger</span>.
+                </div>
+              </li>
+              <li className="flex gap-2">
+                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-purple-400" />
+                <div>
+                  Build a <span className="font-semibold">routine</span> you can
+                  rehearse.
+                </div>
+              </li>
+              <li className="flex gap-2">
+                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                <div>
+                  Output a <span className="font-semibold">plan</span> (reset /
+                  script / if-then).
+                </div>
+              </li>
+            </ul>
+
+            <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-3 text-[11px] text-slate-300">
+              Tip: The routine only works if it’s trained in practice first.
+            </div>
+          </SurfaceB>
+        </div>
       </div>
     </Section>
   );
 };
 
-const TestimonialSection: React.FC = () => {
+const StoriesSection: React.FC = () => {
   return (
     <Section
       id="stories"
       eyebrow="From the field"
       title="Stories from athletes & high performers."
-      kicker="Names & details are composited to protect privacy, but the themes are real: pressure, doubt, comebacks, and learning to love competing again."
+      kicker="Names are anonymized. The point is the pattern: pressure → routine → freedom."
       align="left"
     >
       <div className="grid gap-4 md:grid-cols-3 md:gap-5 lg:gap-6">
         {TESTIMONIALS.map((t) => (
-          <GlassCard
+          <SurfaceB
             key={t.name}
-            className="p-4 md:p-5 flex flex-col justify-between hover:-translate-y-1 hover:shadow-xl hover:shadow-purple-500/30 transition-all duration-300"
+            className="p-5 md:p-6 flex flex-col justify-between hover:bg-white/[0.05] transition-colors"
           >
             <div>
-              <p className="text-xs md:text-sm text-slate-100/95 leading-relaxed mb-3">
+              <p className="text-[11px] md:text-sm text-slate-100/95 leading-relaxed">
                 “{t.quote}”
               </p>
             </div>
-            <div className="mt-3 border-t border-white/10 pt-3 flex flex-col gap-1">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold text-white">{t.name}</p>
-                  <p className="text-[11px] text-slate-300">
-                    {t.role} · {t.sport}
-                  </p>
-                </div>
-                <span className="rounded-full bg-emerald-500/15 border border-emerald-400/40 px-2 py-1 text-[10px] text-emerald-200 max-w-[140px] text-right leading-snug">
-                  {t.highlight}
-                </span>
+            <div className="mt-4 border-t border-white/10 pt-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold text-white">{t.name}</p>
+                <p className="text-[11px] text-slate-300">
+                  {t.role} · {t.sport}
+                </p>
               </div>
+              <span className="rounded-full bg-emerald-500/10 border border-emerald-400/30 px-2.5 py-1 text-[10px] text-emerald-200 text-right leading-snug">
+                {t.highlight}
+              </span>
             </div>
-          </GlassCard>
+          </SurfaceB>
         ))}
       </div>
     </Section>
   );
 };
 
-const UseCasesSection: React.FC = () => {
+const FAQSection: React.FC = () => {
+  const [openIndex, setOpenIndex] = useState<number | null>(0);
+
   return (
     <Section
-      id="who-its-for"
-      eyebrow="Who BGPT is built for"
-      title="If you live or die by your performance, you’re in the right place."
-      kicker="BGPT is designed for athletes and high performers age 16+ who are serious about their craft. It doesn’t matter if your arena is a court, track, stage, or boardroom."
+      id="faq"
+      eyebrow="FAQ"
+      title="Clear answers before you commit."
+      kicker="The goal is trust through clarity — not over-explaining."
       align="left"
     >
-      <div className="grid gap-5 md:grid-cols-3">
-        <GlassCard className="p-4 md:p-5 flex flex-col">
-          <h3 className="text-sm md:text-base font-semibold text-white mb-2">
-            Athletes & teams
-          </h3>
-          <ul className="text-xs md:text-sm text-slate-200/90 space-y-1.5">
-            <li>• College & academy players under real pressure</li>
-            <li>• Pros needing a mental edge season after season</li>
-            <li>• Team leaders who want better emotional control</li>
-            <li>• Athletes bouncing back from injury or setbacks</li>
-          </ul>
-        </GlassCard>
-        <GlassCard className="p-4 md:p-5 flex flex-col">
-          <h3 className="text-sm md:text-base font-semibold text-white mb-2">
-            High-pressure professionals
-          </h3>
-          <ul className="text-xs md:text-sm text-slate-200/90 space-y-1.5">
-            <li>• Founders & entrepreneurs navigating volatility</li>
-            <li>• Creatives shipping work in public</li>
-            <li>• Traders, performers, and executives under scrutiny</li>
-            <li>• Anyone who “competes” in their career daily</li>
-          </ul>
-        </GlassCard>
-        <GlassCard className="p-4 md:p-5 flex flex-col">
-          <h3 className="text-sm md:text-base font-semibold text-white mb-2">
-            What BGPT is not
-          </h3>
-          <ul className="text-xs md:text-sm text-slate-200/90 space-y-1.5">
-            <li>• Not a replacement for therapy or medical help</li>
-            <li>• Not for crisis situations or emergencies</li>
-            <li>• Not generic “daily motivation” content</li>
-            <li>• Not a shortcut — it’s a training partner</li>
-          </ul>
-        </GlassCard>
+      <div className="grid gap-4 md:grid-cols-[1fr,0.9fr] items-start">
+        <div className="space-y-3">
+          {FAQ.map((item, idx) => {
+            const open = openIndex === idx;
+            return (
+              <SurfaceB key={item.q} className="p-5 md:p-6">
+                <button
+                  type="button"
+                  onClick={() => setOpenIndex((cur) => (cur === idx ? null : idx))}
+                  className="w-full text-left flex items-start justify-between gap-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-2xl"
+                  aria-expanded={open}
+                >
+                  <div className="text-sm md:text-base font-semibold text-white">
+                    {item.q}
+                  </div>
+                  <div className="mt-0.5 rounded-xl border border-white/10 bg-black/25 px-2 py-1 text-[10px] text-slate-200">
+                    {open ? "–" : "+"}
+                  </div>
+                </button>
+                {open && (
+                  <p className="mt-3 text-[11px] md:text-sm text-slate-200/90 leading-relaxed">
+                    {item.a}
+                  </p>
+                )}
+              </SurfaceB>
+            );
+          })}
+        </div>
+
+        <SurfaceC className="p-5 md:p-6">
+          <div className="text-[10px] uppercase tracking-[0.22em] text-slate-300 mb-2">
+            Ready?
+          </div>
+          <div className="text-xl md:text-2xl font-semibold text-white tracking-tight">
+            Use it before your next session.
+          </div>
+          <p className="mt-2 text-[11px] md:text-sm text-slate-200/90 leading-relaxed">
+            The fastest way to build a mental edge is to train one routine for
+            one moment — then repeat.
+          </p>
+
+          <div className="mt-5 flex flex-col gap-2.5">
+            <PrimaryButton href={OPEN_APP_URL} ariaLabel="Open BGPT now">
+              <span>Open BGPT</span>
+              <span className="text-lg leading-none">↗</span>
+            </PrimaryButton>
+            <SecondaryButton href={PRICING_URL} ariaLabel="See pricing">
+              <span>Pricing / Access</span>
+            </SecondaryButton>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-3 text-[11px] text-slate-300">
+            Privacy note: keep sessions private by default and let users delete
+            them.
+          </div>
+        </SurfaceC>
       </div>
     </Section>
   );
 };
 
-const StartSection: React.FC = () => {
+const FinalCTASection: React.FC<{ onWatchDemo: () => void }> = ({ onWatchDemo }) => {
   const { ref, inView } = useInView<HTMLDivElement>();
-
   return (
-    <section
-      id="start"
-      ref={ref}
-      className="relative py-16 md:py-20 lg:py-24"
-    >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(129,140,248,0.12),transparent_55%),radial-gradient(circle_at_bottom,_rgba(56,189,248,0.12),transparent_55%)] opacity-80" />
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-70" />
+    <section id="start" ref={ref} className="relative py-16 md:py-20 lg:py-24">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(129,140,248,0.10),transparent_55%),radial-gradient(circle_at_bottom,_rgba(56,189,248,0.10),transparent_55%)] opacity-80" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-70" />
+
       <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        <GlassCard
-          className={`p-6 md:p-8 lg:p-9 ${
+        <SurfaceC
+          className={`p-6 md:p-8 lg:p-10 ${
             inView
               ? "animate-[slideUpSoft_0.9s_ease-out_forwards]"
               : "opacity-0 translate-y-6"
@@ -934,134 +1428,76 @@ const StartSection: React.FC = () => {
         >
           <div className="grid gap-6 md:grid-cols-[1.1fr,1fr] items-center">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-black/60 px-2.5 py-1 border border-white/10 mb-3">
+              <div className="inline-flex items-center gap-2 rounded-full bg-black/45 px-2.5 py-1 border border-white/10 mb-3">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="text-[10px] uppercase tracking-[0.22em] text-slate-200">
-                  Your next mental rep
+                  Start now
                 </span>
               </div>
-              <h2 className="text-2xl md:text-3xl font-semibold text-white tracking-tight mb-3">
-                Take 10 minutes. Get one powerful shift.
+              <h2 className="text-2xl md:text-3xl font-semibold text-white tracking-[-0.02em] mb-3">
+                One routine. One moment. Big shift.
               </h2>
+
               <p className="text-sm md:text-base text-slate-200/90 leading-relaxed mb-4">
-                You don’t need a perfect plan to start. You just need one honest
-                conversation about what’s actually happening in your game — and
-                a clear next step that you can bring into your next practice or
-                competition.
+                Don’t redesign your whole mindset. Start with the exact moment
+                you tighten — and train a response you can trust.
               </p>
-              <ol className="space-y-2 text-xs md:text-sm text-slate-200/90 mb-4">
-                <li>
-                  <span className="font-semibold text-slate-50">
-                    1. Share one real situation
-                  </span>{" "}
-                  — a tough game, recurring fear, or moment you keep replaying.
+
+              <ul className="space-y-2 text-[11px] md:text-sm text-slate-200/90 mb-4">
+                <li className="flex gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-sky-400" />
+                  <span>
+                    Describe your moment (mistake, clutch, anxiety, injury return).
+                  </span>
                 </li>
-                <li>
-                  <span className="font-semibold text-slate-50">
-                    2. BGPT maps it to the 5 Fundamentals
-                  </span>{" "}
-                  and asks targeted questions to clarify what’s really going on.
+                <li className="flex gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-purple-400" />
+                  <span>
+                    Get a routine (reset / script / if-then plan).
+                  </span>
                 </li>
-                <li>
-                  <span className="font-semibold text-slate-50">
-                    3. You leave with a simple reset routine
-                  </span>{" "}
-                  or script you can use this week.
+                <li className="flex gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  <span>
+                    Rehearse it in practice so it shows up in games.
+                  </span>
                 </li>
-              </ol>
-              <p className="text-[11px] md:text-xs text-slate-300/90">
-                Start where you are. Don’t wait for the “perfect” moment. Your
-                mental game is built one conversation at a time.
-              </p>
-            </div>
-            <div className="flex flex-col gap-4">
-              <button className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-purple-500 to-sky-400 px-4 py-2.5 text-xs md:text-sm font-medium text-white shadow-xl shadow-purple-500/40 hover:shadow-purple-400/60 hover:-translate-y-0.5 transition-all duration-200">
-                <span>Open Dr. Brett GPT</span>
-                <span className="text-lg leading-none">↗</span>
-              </button>
-              <div className="rounded-2xl bg-black/60 border border-white/10 px-3.5 py-3 text-[11px] md:text-xs text-slate-200/90 leading-relaxed">
-                <span className="font-semibold text-slate-50">
-                  No signup needed
-                </span>
-                . Use BGPT as a private training space for your mind. Share as
-                much or as little as you want — the goal is clarity, not
-                perfection.
+              </ul>
+
+              <div className="text-[11px] text-slate-300">
+                Minimal disclaimers: performance coaching only. Not for emergencies.
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-900/90 px-2.5 py-1 text-[10px] text-slate-200/90 border border-white/10">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                  <span>Available 24/7 before or after training</span>
-                </div>
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-900/90 px-2.5 py-1 text-[10px] text-slate-200/90 border border-white/10">
-                  <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
-                  <span>Takes 5–10 minutes per session</span>
-                </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <PrimaryButton href={OPEN_APP_URL} ariaLabel="Open BGPT app">
+                <span>Open BGPT</span>
+                <span className="text-lg leading-none">↗</span>
+              </PrimaryButton>
+              <SecondaryButton onClick={onWatchDemo} ariaLabel="Watch demo">
+                <span>Watch 45s demo</span>
+                <span className="text-base leading-none">▶</span>
+              </SecondaryButton>
+
+              <div className="rounded-2xl bg-black/40 border border-white/10 px-3.5 py-3 text-[11px] md:text-xs text-slate-200/90 leading-relaxed">
+                <span className="font-semibold text-slate-50">Tip:</span> Put your
+                routine on a note card and rehearse it 5 times in warm-up.
               </div>
             </div>
           </div>
-        </GlassCard>
+        </SurfaceC>
       </div>
     </section>
   );
 };
 
-const Footer: React.FC = () => {
-  return (
-    <footer className="relative border-t border-white/5 bg-gradient-to-b from-slate-950 to-black py-8 md:py-10">
-      <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-      <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <div className="h-7 w-7 rounded-2xl bg-gradient-to-br from-purple-500 to-sky-400 flex items-center justify-center text-[11px] font-semibold text-white">
-              BG
-            </div>
-            <span className="text-xs md:text-sm font-semibold text-white">
-              Dr. Brett GPT
-            </span>
-          </div>
-          <p className="text-[11px] md:text-xs text-slate-400 max-w-md leading-relaxed">
-            A performance-focused mental game assistant. Not a therapist, not
-            medical advice, and not for emergencies. If you’re in crisis, reach
-            out to trusted people or local services immediately.
-          </p>
-        </div>
-        <div className="flex flex-col items-start md:items-end gap-2">
-          <div className="flex flex-wrap gap-2">
-            <a
-              href="#how-it-works"
-              className="text-[11px] md:text-xs text-slate-300 hover:text-white underline/50 decoration-slate-600 hover:decoration-slate-200"
-            >
-              Principles Of How We Work
-            </a>
-            <a
-              href="#who-its-for"
-              className="text-[11px] md:text-xs text-slate-300 hover:text-white underline/50 decoration-slate-600 hover:decoration-slate-200"
-            >
-              Who it’s for
-            </a>
-            <a
-              href="#start"
-              className="text-[11px] md:text-xs text-slate-300 hover:text-white underline/50 decoration-slate-600 hover:decoration-slate-200"
-            >
-              Start a session
-            </a>
-          </div>
-          <p className="text-[10px] text-slate-500">
-            © 2025 The Mental Game Cafe · All rights reserved.
-          </p>
-        </div>
-      </div>
-    </footer>
-  );
-};
+/* ----------------------------- Nav + Background ----------------------------- */
 
 const TopNav: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const handler = () => {
-      setScrolled(window.scrollY > 16);
-    };
+    const handler = () => setScrolled(window.scrollY > 14);
     handler();
     window.addEventListener("scroll", handler, { passive: true });
     return () => window.removeEventListener("scroll", handler);
@@ -1069,7 +1505,7 @@ const TopNav: React.FC = () => {
 
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-40 transition-all duration-300 ${
+      className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
         scrolled ? "backdrop-blur-xl" : "backdrop-blur-none"
       }`}
     >
@@ -1077,207 +1513,242 @@ const TopNav: React.FC = () => {
         <div
           className={`mt-3 flex items-center justify-between gap-4 rounded-2xl border ${
             scrolled
-              ? "border-white/10 bg-black/70 shadow-lg shadow-black/40"
-              : "border-white/5 bg-black/40 shadow-sm shadow-black/30"
-          } px-3 py-2.5 md:px-4 md:py-2.5 transition-colors duration-300`}
+              ? "border-white/10 bg-black/65 shadow-lg shadow-black/35"
+              : "border-white/8 bg-black/35 shadow-sm shadow-black/25"
+          } px-3 py-2 md:px-4 transition-all duration-300 ${
+            scrolled ? "py-2" : "py-2.5"
+          }`}
         >
-          <a href="#top" className="flex items-center gap-2">
+          <a
+            href="#top"
+            className="flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-2xl"
+          >
             <img
               src="https://i.ibb.co/BVX6yYXg/BGPT-secondary-logo-or-icon.png"
               alt="BGPT logo"
-              className="h-7 w-7 rounded-2xl border border-white/10 shadow-sm object-cover"
+              className={`rounded-2xl border border-white/10 shadow-sm object-cover transition-all duration-300 ${
+                scrolled ? "h-7 w-7" : "h-8 w-8"
+              }`}
             />
             <div className="flex flex-col leading-tight">
-              <span className="text-xs md:text-sm font-semibold text-white">
-                Dr. Brett GPT
+              <span className="text-xs md:text-sm font-semibold text-white tracking-[-0.01em]">
+                BGPT
               </span>
-              <span className="text-[9px] md:text-[10px] text-slate-300">
-                Mental Game Coach
+              <span className="text-[10px] md:text-[11px] text-slate-300">
+                Mental performance coach
               </span>
             </div>
           </a>
 
           <nav className="hidden md:flex items-center gap-4 text-[11px] text-slate-200">
-            <a
-              href="#results"
-              className="hover:text-white transition-colors duration-150"
-            >
-              Results
+            <a href="#results" className="hover:text-white transition-colors duration-150">
+              Proof
             </a>
-            <a
-              href="#how-it-works"
-              className="hover:text-white transition-colors duration-150"
-            >
+            <a href="#moments" className="hover:text-white transition-colors duration-150">
+              Moments
+            </a>
+            <a href="#deliverables" className="hover:text-white transition-colors duration-150">
+              What you get
+            </a>
+            <a href="#framework" className="hover:text-white transition-colors duration-150">
               Framework
             </a>
-            <a
-              href="#who-its-for"
-              className="hover:text-white transition-colors duration-150"
-            >
-              Who it’s for
-            </a>
-            <a
-              href="#stories"
-              className="hover:text-white transition-colors duration-150"
-            >
-              Stories
+            <a href="#faq" className="hover:text-white transition-colors duration-150">
+              FAQ
             </a>
           </nav>
 
-          {/* right side CTA block goes here if you had it */}
+          <div className="flex items-center gap-2">
+            <a
+              href={PRICING_URL}
+              className="hidden sm:inline-flex rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] text-slate-200 hover:bg-white/[0.06] hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+            >
+              Pricing
+            </a>
+            <a
+              href={OPEN_APP_URL}
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-purple-500 to-sky-400 px-3.5 py-2 text-[11px] font-medium text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-400/45 hover:-translate-y-0.5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70"
+            >
+              <span>Try BGPT</span>
+              <span className="text-base leading-none">↗</span>
+            </a>
+          </div>
         </div>
       </div>
     </header>
   );
-}; // ✅ close the component
+};
 
-const BackgroundScrollEffects: React.FC = () => {
+const Background: React.FC = () => {
   const scrollProgress = useScrollProgress();
   const style = useMemo<React.CSSProperties>(() => {
-    const opacity = 0.25 + scrollProgress * 0.5;
-    const rotation = scrollProgress * 12;
-    return {
-      opacity,
-      transform: `translate3d(0,0,0) rotate(${rotation}deg)`,
-    };
+    const opacity = 0.18 + scrollProgress * 0.35;
+    const rotation = scrollProgress * 10;
+    return { opacity, transform: `rotate(${rotation}deg)` };
   }, [scrollProgress]);
 
   return (
     <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.9),rgba(15,23,42,1))]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.92),rgba(15,23,42,1))]" />
+
+      {/* Reduced blur, more shape identity */}
       <div
-        className="absolute -left-24 top-10 h-64 w-64 rounded-[3rem] border border-purple-500/40 bg-gradient-to-br from-purple-500/30 via-sky-500/10 to-transparent blur-3xl mix-blend-screen"
+        className="absolute -left-28 top-12 h-60 w-60 rounded-[3rem] border border-purple-500/30 bg-gradient-to-br from-purple-500/24 via-sky-500/10 to-transparent mix-blend-screen"
         style={style}
       />
       <div
-        className="absolute -right-16 bottom-10 h-64 w-64 rounded-[3rem] border border-sky-400/40 bg-gradient-to-tl from-sky-400/30 via-emerald-400/10 to-transparent blur-3xl mix-blend-screen"
+        className="absolute -right-16 bottom-10 h-60 w-60 rounded-[3rem] border border-sky-400/30 bg-gradient-to-tl from-sky-400/22 via-emerald-400/10 to-transparent mix-blend-screen"
         style={style}
       />
-      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,_rgba(15,23,42,0.4),rgba(15,23,42,0.95))]" />
-      <div className="absolute inset-x-0 bottom-0 h-[30vh] bg-gradient-to-t from-black via-slate-950/80 to-transparent" />
+
+      <div className="absolute inset-x-0 bottom-0 h-[30vh] bg-gradient-to-t from-black via-slate-950/70 to-transparent" />
     </div>
   );
 };
 
+/* ----------------------------- Footer (Reduced disclaimers) ----------------------------- */
+
+const Footer: React.FC = () => {
+  return (
+    <footer className="relative border-t border-white/6 bg-gradient-to-b from-slate-950 to-black py-8 md:py-10">
+      <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+      <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <img
+              src="https://i.ibb.co/BVX6yYXg/BGPT-secondary-logo-or-icon.png"
+              alt="BGPT logo"
+              className="h-7 w-7 rounded-2xl border border-white/10 object-cover"
+            />
+            <span className="text-xs md:text-sm font-semibold text-white">
+              BGPT
+            </span>
+          </div>
+          <p className="text-[11px] md:text-xs text-slate-400 max-w-md leading-relaxed">
+            Performance coaching tools for pressure moments. Privacy-first by
+            design.
+          </p>
+          <p className="mt-2 text-[10px] text-slate-500">
+            Not for emergencies. If you’re in crisis, contact local support.
+          </p>
+        </div>
+
+        <div className="flex flex-col items-start md:items-end gap-2">
+          <div className="flex flex-wrap gap-3">
+            <a
+              href="#moments"
+              className="text-[11px] md:text-xs text-slate-300 hover:text-white underline/50 decoration-slate-600 hover:decoration-slate-200"
+            >
+              Moments
+            </a>
+            <a
+              href="#deliverables"
+              className="text-[11px] md:text-xs text-slate-300 hover:text-white underline/50 decoration-slate-600 hover:decoration-slate-200"
+            >
+              What you get
+            </a>
+            <a
+              href="#faq"
+              className="text-[11px] md:text-xs text-slate-300 hover:text-white underline/50 decoration-slate-600 hover:decoration-slate-200"
+            >
+              FAQ
+            </a>
+            <a
+              href={OPEN_APP_URL}
+              className="text-[11px] md:text-xs text-slate-300 hover:text-white underline/50 decoration-slate-600 hover:decoration-slate-200"
+            >
+              Open BGPT
+            </a>
+          </div>
+          <p className="text-[10px] text-slate-500">
+            © 2025 BGPT · All rights reserved.
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
+};
+
+/* ----------------------------- App ----------------------------- */
+
 const App: React.FC = () => {
+  const [demoOpen, setDemoOpen] = useState(false);
+
+  const openDemo = useCallback(() => setDemoOpen(true), []);
+  const closeDemo = useCallback(() => setDemoOpen(false), []);
+
   return (
     <main id="top" className="min-h-screen bg-slate-950 text-slate-50">
-      <BackgroundScrollEffects />
+      <Background />
       <TopNav />
-      <HeroSection />
+
+      <HeroSection onWatchDemo={openDemo} />
+
+      <SoftDivider label="PROOF" />
       <StatsSection />
+
+      <SoftDivider label="MOMENTS" />
+      <MomentsSection />
+
+      <SoftDivider label="OUTPUTS" />
+      <DeliverablesSection />
+
+      <SoftDivider label="FRAMEWORK" />
       <FrameworkSection />
-      <UseCasesSection />
-      <TestimonialSection />
-      <StartSection />
+
+      <SoftDivider label="STORIES" />
+      <StoriesSection />
+
+      <SoftDivider label="FAQ" />
+      <FAQSection />
+
+      <FinalCTASection onWatchDemo={openDemo} />
+
       <Footer />
+
+      <Modal open={demoOpen} onClose={closeDemo} title="BGPT — 45 second demo">
+        <div className="aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-black/60">
+          {/* Replace with your own player; this is safe default */}
+          <video
+            src={WATCH_DEMO_URL}
+            controls
+            className="h-full w-full"
+            poster="" // optional thumbnail
+          />
+        </div>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="text-[11px] text-slate-300">
+            Want this exact flow? Open the app and start a session.
+          </div>
+          <div className="flex items-center gap-2">
+            <SecondaryButton onClick={closeDemo}>Close</SecondaryButton>
+            <PrimaryButton href={OPEN_APP_URL}>Open BGPT ↗</PrimaryButton>
+          </div>
+        </div>
+      </Modal>
     </main>
   );
 };
 
 export default App;
 
-// -----------------------------------------------------------------------------
-// Padding lines for >800 line requirement (does not affect functionality)
-// -----------------------------------------------------------------------------
+/* -----------------------------------------------------------------------------
+  Animations (Tailwind arbitrary names used above)
+  Keep these minimal for performance.
+----------------------------------------------------------------------------- */
 
-// line-pad-001
-// line-pad-002
-// line-pad-003
-// line-pad-004
-// line-pad-005
-// line-pad-006
-// line-pad-007
-// line-pad-008
-// line-pad-009
-// line-pad-010
-// line-pad-011
-// line-pad-012
-// line-pad-013
-// line-pad-014
-// line-pad-015
-// line-pad-016
-// line-pad-017
-// line-pad-018
-// line-pad-019
-// line-pad-020
-// line-pad-021
-// line-pad-022
-// line-pad-023
-// line-pad-024
-// line-pad-025
-// line-pad-026
-// line-pad-027
-// line-pad-028
-// line-pad-029
-// line-pad-030
-// line-pad-031
-// line-pad-032
-// line-pad-033
-// line-pad-034
-// line-pad-035
-// line-pad-036
-// line-pad-037
-// line-pad-038
-// line-pad-039
-// line-pad-040
-// line-pad-041
-// line-pad-042
-// line-pad-043
-// line-pad-044
-// line-pad-045
-// line-pad-046
-// line-pad-047
-// line-pad-048
-// line-pad-049
-// line-pad-050
-// line-pad-051
-// line-pad-052
-// line-pad-053
-// line-pad-054
-// line-pad-055
-// line-pad-056
-// line-pad-057
-// line-pad-058
-// line-pad-059
-// line-pad-060
-// line-pad-061
-// line-pad-062
-// line-pad-063
-// line-pad-064
-// line-pad-065
-// line-pad-066
-// line-pad-067
-// line-pad-068
-// line-pad-069
-// line-pad-070
-// line-pad-071
-// line-pad-072
-// line-pad-073
-// line-pad-074
-// line-pad-075
-// line-pad-076
-// line-pad-077
-// line-pad-078
-// line-pad-079
-// line-pad-080
-// line-pad-081
-// line-pad-082
-// line-pad-083
-// line-pad-084
-// line-pad-085
-// line-pad-086
-// line-pad-087
-// line-pad-088
-// line-pad-089
-// line-pad-090
-// line-pad-091
-// line-pad-092
-// line-pad-093
-// line-pad-094
-// line-pad-095
-// line-pad-096
-// line-pad-097
-// line-pad-098
-// line-pad-099
-// line-pad-100
+/* 
+  NOTE: In Tailwind, keyframes would typically live in tailwind.config.
+  But since you’re running arbitrary animation names already,
+  ensure these exist in your global CSS if needed:
+
+  @keyframes slideUpSoft {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeInSoft {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+*/

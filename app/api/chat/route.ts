@@ -1,20 +1,30 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/auth-helpers-nextjs";
+
+/* -------------------------------------------------------------------------- */
+/* OpenAI */
+/* -------------------------------------------------------------------------- */
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-/* ---------------- Configuration ---------------- */
+/* -------------------------------------------------------------------------- */
+/* Configuration */
+/* -------------------------------------------------------------------------- */
 
 const MODEL = "gpt-4o-mini";
 
-// Hard limits (protect tokens & abuse)
+// Abuse protection
 const MAX_MESSAGES = 20;
-const MAX_MESSAGE_CHARS = 1_200;
-const MAX_TOTAL_CHARS = 8_000;
+const MAX_MESSAGE_CHARS = 1200;
+const MAX_TOTAL_CHARS = 8000;
 
-/* ---------------- System Prompt (LOCKED) ---------------- */
+/* -------------------------------------------------------------------------- */
+/* Locked System Prompt */
+/* -------------------------------------------------------------------------- */
 
 const SYSTEM_PROMPT = `
 You are Dr. Brett GPT — a calm, practical mental performance coach for athletes (16+).
@@ -37,12 +47,18 @@ Style:
 - Calm and confident
 `;
 
-/* ---------------- Helpers ---------------- */
+/* -------------------------------------------------------------------------- */
+/* Types */
+/* -------------------------------------------------------------------------- */
 
 type ChatMessage = {
   role: "user" | "assistant" | "system";
   content: string;
 };
+
+/* -------------------------------------------------------------------------- */
+/* Helpers */
+/* -------------------------------------------------------------------------- */
 
 function sanitizeMessages(input: any): ChatMessage[] {
   if (!Array.isArray(input)) return [];
@@ -66,10 +82,49 @@ function countChars(messages: ChatMessage[]) {
   return messages.reduce((sum, m) => sum + m.content.length, 0);
 }
 
-/* ---------------- Route ---------------- */
+/* -------------------------------------------------------------------------- */
+/* Route */
+/* -------------------------------------------------------------------------- */
 
 export async function POST(req: Request) {
   try {
+    /* ---------------- Supabase (Server-side) ---------------- */
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { cookies }
+    );
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    /* ---------------- Paid Enforcement ---------------- */
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("is_paid")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || !profile?.is_paid) {
+      return NextResponse.json(
+        { error: "Paid access required" },
+        { status: 402 } // Payment Required
+      );
+    }
+
+    /* ---------------- Input Validation ---------------- */
+
     const body = await req.json();
 
     if (!body || !Array.isArray(body.messages)) {
@@ -79,10 +134,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // Remove any user-supplied system messages (prompt injection defense)
     const cleanedMessages = sanitizeMessages(body.messages);
 
-    if (cleanedMessages.length === 0) {
+    if (!cleanedMessages.length) {
       return NextResponse.json(
         { error: "No valid messages provided" },
         { status: 400 }
@@ -96,7 +150,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔒 Enforce OUR system prompt at the top
+    /* ---------------- OpenAI Call ---------------- */
+
     const finalMessages: ChatMessage[] = [
       { role: "system", content: SYSTEM_PROMPT },
       ...cleanedMessages,
@@ -120,7 +175,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ reply });
   } catch (err) {
-    console.error("API /chat error:", err);
+    console.error("/api/chat error:", err);
 
     return NextResponse.json(
       {

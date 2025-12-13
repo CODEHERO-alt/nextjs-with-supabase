@@ -7,6 +7,11 @@
  * - Motivating celebrations without hype/emojis
  * - Local demo "coach replies" (NO API calls yet)
  * - Ready to swap the local responder with /api/chat later
+ *
+ * Production-ready changes (NO visual changes):
+ * - Eliminated crypto/random/date usage during prerender/build/render time
+ * - IDs + timestamps generated only after mount
+ * - Deterministic seed transcript prevents Next.js prerender errors
  */
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -57,27 +62,21 @@ const QUICK_MOMENTS: Array<{ label: string; hint: string }> = [
 const STARTER_TEMPLATES: Array<{ title: string; body: string }> = [
   {
     title: "90-Second Reset Routine",
-    body:
-      "Build a reset I can run after a mistake. My sport is ___. My next game is ___. The moment I struggle most is ___.",
+    body: "Build a reset I can run after a mistake. My sport is ___. My next game is ___. The moment I struggle most is ___.",
   },
   {
     title: "Pre-Game Focus Script",
-    body:
-      "Write a short pre-game script I can read before warm-up. I want to feel ___. My biggest distraction is ___.",
+    body: "Write a short pre-game script I can read before warm-up. I want to feel ___. My biggest distraction is ___.",
   },
   {
     title: "Post-Game Review (5 minutes)",
-    body:
-      "Guide me through a quick post-game review. Today I did ___. I struggled with ___. One thing I want to improve is ___.",
+    body: "Guide me through a quick post-game review. Today I did ___. I struggled with ___. One thing I want to improve is ___.",
   },
   {
     title: "Confidence Rebuild Plan",
-    body:
-      "Create a simple 14-day plan to rebuild confidence. My level is ___. I can commit __ minutes/day.",
+    body: "Create a simple 14-day plan to rebuild confidence. My level is ___. I can commit __ minutes/day.",
   },
 ];
-
-let __uidCounter = 0;
 
 const DOCK_ACTIONS: Array<{ k: string; label: string; description: string }> = [
   { k: "reset", label: "Reset routine", description: "Stabilize your body and attention fast." },
@@ -86,14 +85,27 @@ const DOCK_ACTIONS: Array<{ k: string; label: string; description: string }> = [
   { k: "plan", label: "2-week plan", description: "Turn today into momentum." },
 ];
 
+/**
+ * Build-safe deterministic ID generator:
+ * - NO crypto/random/date at render time
+ * - Safe for Next.js prerender/static analysis
+ */
+let __uidCounter = 0;
 function uid(prefix = "m") {
-  // Safe for Next.js prerender/build: no Math.random during render
-  // Uses crypto.randomUUID in the browser, fallback avoids randomness.
+  __uidCounter = (__uidCounter + 1) % Number.MAX_SAFE_INTEGER;
+  return `${prefix}_static_${__uidCounter.toString(16)}`;
+}
+
+/**
+ * Real runtime ID generator (browser-only, called in effects / event handlers)
+ */
+function runtimeId(prefix = "m") {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return `${prefix}_${crypto.randomUUID()}`;
   }
-   __uidCounter = (__uidCounter + 1) % Number.MAX_SAFE_INTEGER;
-  return `${prefix}_${Date.now().toString(16)}_${__uidCounter.toString(16)}`;
+  // Fallback: deterministic-enough during runtime without Math.random
+  __uidCounter = (__uidCounter + 1) % Number.MAX_SAFE_INTEGER;
+  return `${prefix}_${__uidCounter.toString(16)}`;
 }
 
 function formatTime(ts: number) {
@@ -134,8 +146,7 @@ function buildCoachDraft(userText: string): CoachDraft {
     { kind: "h", text: "Good. Don’t rush past that." } as const,
     {
       kind: "p",
-      text:
-        "A real win isn’t just the scoreboard — it’s the moment you stayed present when it mattered. That’s a repeatable skill.",
+      text: "A real win isn’t just the scoreboard — it’s the moment you stayed present when it mattered. That’s a repeatable skill.",
     } as const,
     {
       kind: "callout",
@@ -152,13 +163,11 @@ function buildCoachDraft(userText: string): CoachDraft {
     } as const,
     {
       kind: "quote",
-      text:
-        "Confidence grows when you can explain your calm — not when you hope it shows up again.",
+      text: "Confidence grows when you can explain your calm — not when you hope it shows up again.",
     } as const,
     {
       kind: "p",
-      text:
-        "Tell me your sport and the specific moment. I’ll help you turn that into a 15-second reset you can run before big plays.",
+      text: "Tell me your sport and the specific moment. I’ll help you turn that into a 15-second reset you can run before big plays.",
     } as const,
   ];
 
@@ -166,14 +175,12 @@ function buildCoachDraft(userText: string): CoachDraft {
     { kind: "h", text: "I hear the frustration." } as const,
     {
       kind: "p",
-      text:
-        "Losses sting when effort is high. That’s normal. The goal is to extract one lesson without turning it into a story about you as a person.",
+      text: "Losses sting when effort is high. That’s normal. The goal is to extract one lesson without turning it into a story about you as a person.",
     } as const,
     {
       kind: "callout",
       label: "Rule",
-      text:
-        "We only review what you can control: attention, body, decisions, and response after mistakes.",
+      text: "We only review what you can control: attention, body, decisions, and response after mistakes.",
     } as const,
     {
       kind: "ul",
@@ -185,16 +192,14 @@ function buildCoachDraft(userText: string): CoachDraft {
     } as const,
     {
       kind: "p",
-      text:
-        "If you share the moment you want back, I’ll help you build a simple reset so that pattern doesn’t repeat.",
+      text: "If you share the moment you want back, I’ll help you build a simple reset so that pattern doesn’t repeat.",
     } as const,
   ];
 
   const steady = [
     {
       kind: "p",
-      text:
-        "Got it. We’ll keep this practical. I’ll ask two quick questions and then give you one clean step you can run today.",
+      text: "Got it. We’ll keep this practical. I’ll ask two quick questions and then give you one clean step you can run today.",
     } as const,
     {
       kind: "ul",
@@ -205,8 +210,7 @@ function buildCoachDraft(userText: string): CoachDraft {
     } as const,
     {
       kind: "p",
-      text:
-        "While you answer: we’ll likely build a short routine you can repeat — nothing complicated, just reliable.",
+      text: "While you answer: we’ll likely build a short routine you can repeat — nothing complicated, just reliable.",
     } as const,
   ];
 
@@ -218,21 +222,15 @@ function buildCoachDraft(userText: string): CoachDraft {
     Perseverance: "This is Perseverance: keep showing up with structure, not emotion.",
   };
 
-  const titleByTone: Record<CoachDraft["title"], CoachDraft["title"]> = {
-    "": "",
-  } as any;
-
   const baseTitle =
     tone === "celebrate"
       ? "Lock in the win"
       : tone === "reframe"
-        ? "Turn the loss into a lesson"
-        : "One clean step forward";
+      ? "Turn the loss into a lesson"
+      : "One clean step forward";
 
-  const blocks =
-    tone === "celebrate" ? celebration : tone === "reframe" ? reframe : steady;
+  const blocks = tone === "celebrate" ? celebration : tone === "reframe" ? reframe : steady;
 
-  // Insert the fundamental “frame” near the top (Notion-style authored hint)
   const framed: CoachDraft["blocks"] = [
     { kind: "callout", label: fundamental, text: headByFundamental[fundamental] },
     ...blocks,
@@ -245,26 +243,7 @@ function buildCoachDraft(userText: string): CoachDraft {
   };
 }
 
-function draftToMessage(draft: CoachDraft): Message {
-  // Store the draft as structured “markdown-ish” text for now (we’ll render blocks in UI)
-  // But we keep blocks separately via meta; the actual content can be a plain summary string.
-  const summary = `${draft.title} — ${draft.fundamental}`;
-  return {
-    id: uid("a"),
-    role: "assistant",
-    content: summary,
-    createdAt: Date.now(),
-    meta: {
-      title: draft.title,
-      tags: ["coaching", draft.fundamental.toLowerCase()],
-      fundamental: draft.fundamental,
-      tone: "steady",
-    },
-  };
-}
-
 function composeBlockText(blocks: CoachDraft["blocks"]): string {
-  // Not used for rendering (we render blocks), but useful for future storage/export.
   const lines: string[] = [];
   for (const b of blocks) {
     if (b.kind === "h") lines.push(`## ${b.text}`);
@@ -284,11 +263,40 @@ function useAutoScroll(deps: any[]) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    // Smoothly scroll to bottom when deps change (new message)
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
   return ref;
+}
+
+/**
+ * Deterministic seed transcript: NO Date.now/crypto at build time
+ * We'll hydrate these with real IDs/timestamps after mount.
+ */
+function buildSeedMessages(): Message[] {
+  return [
+    {
+      id: uid("s"),
+      role: "system",
+      content: "Private coaching session. Keep answers practical and athlete-friendly.",
+      createdAt: 0,
+    },
+    {
+      id: uid("a"),
+      role: "assistant",
+      content:
+        "Ready to cut through the noise and elevate your game? I’m BGPT, Dr. Brett’s AI Coaching Assistant. State the challenge you wish to conquer.",
+      createdAt: 0,
+      meta: { fundamental: "Poise", tags: ["intro"], title: "Welcome" },
+    },
+    {
+      id: uid("u"),
+      role: "user",
+      content:
+        "Late in games I start thinking ahead, my legs feel heavy, and I rush decisions. I know what to do — I just don’t execute.",
+      createdAt: 0,
+    },
+  ];
 }
 
 export default function ChatPage() {
@@ -305,47 +313,37 @@ export default function ChatPage() {
 
   const [draftBlocks, setDraftBlocks] = useState<CoachDraft["blocks"] | null>(null);
 
-  const initialMessages = useMemo<Message[]>(
-    () => [
-      {
-        id: uid("s"),
-        role: "system",
-        content: "Private coaching session. Keep answers practical and athlete-friendly.",
-        createdAt: Date.now() - 1000 * 60 * 12,
-      },
-      {
-        id: uid("a"),
-        role: "assistant",
-        content:
-          "Ready to cut through the noise and elevate your game? I’m BGPT, Dr. Brett’s AI Coaching Assistant. State the challenge you wish to conquer.",
-        createdAt: Date.now() - 1000 * 60 * 11,
-        meta: { fundamental: "Poise", tags: ["intro"], title: "Welcome" },
-      },
-      {
-        id: uid("u"),
-        role: "user",
-        content:
-          "Late in games I start thinking ahead, my legs feel heavy, and I rush decisions. I know what to do — I just don’t execute.",
-        createdAt: Date.now() - 1000 * 60 * 10,
-      },
-    ],
-    []
-  );
+  // Seed messages are deterministic to satisfy Next build
+  const seedMessages = useMemo(() => buildSeedMessages(), []);
 
-  const [messages, setMessages] = useState<Message[]>(() => initialMessages);
+  const [messages, setMessages] = useState<Message[]>(() => seedMessages);
+
+  // Hydrate seed transcript with real IDs and realistic timestamps after mount
+  useEffect(() => {
+    const now = Date.now();
+    const hydrated = seedMessages.map((m, idx) => {
+      const minutesAgo = 12 - idx; // mimic your original offsets
+      const createdAt = now - minutesAgo * 60_000;
+      return {
+        ...m,
+        id: runtimeId(m.role === "assistant" ? "a" : m.role === "user" ? "u" : "s"),
+        createdAt,
+      };
+    });
+    setMessages(hydrated);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const scrollerRef = useAutoScroll([messages.length, isTyping]);
 
   const publicDemoNote = useMemo(() => {
     return {
       label: "Demo mode",
-      text:
-        "This chat is currently design-first. Replies are simulated locally for client review. We’ll connect it to the OpenAI API after feedback.",
+      text: "This chat is currently design-first. Replies are simulated locally for client review. We’ll connect it to the OpenAI API after feedback.",
     };
   }, []);
 
   const coachPresenceLine = useMemo(() => {
-    // subtle status line (Notion-ish)
     return isTyping ? "Thinking…" : "Online";
   }, [isTyping]);
 
@@ -354,7 +352,7 @@ export default function ChatPage() {
     if (!clean) return;
 
     const m: Message = {
-      id: uid("u"),
+      id: runtimeId("u"),
       role: "user",
       content: clean,
       createdAt: Date.now(),
@@ -365,15 +363,15 @@ export default function ChatPage() {
   async function simulateCoachResponse(userText: string) {
     setIsTyping(true);
 
-    // Simulate “thinking” in a calm premium way
     const delayMs = clamp(650 + userText.length * 12, 800, 2200);
     await new Promise((r) => setTimeout(r, delayMs));
 
     const draft = buildCoachDraft(userText);
+
     const assistantMsg: Message = {
-      id: uid("a"),
+      id: runtimeId("a"),
       role: "assistant",
-      content: composeBlockText(draft.blocks), // for storage/export later
+      content: composeBlockText(draft.blocks),
       createdAt: Date.now(),
       meta: {
         title: draft.title,
@@ -419,9 +417,7 @@ export default function ChatPage() {
       return;
     }
     if (k === "review") {
-      setInput(
-        "Guide me through a 5-minute post-game review. Today I did ___. I struggled with ___."
-      );
+      setInput("Guide me through a 5-minute post-game review. Today I did ___. I struggled with ___.");
       return;
     }
     if (k === "plan") {
@@ -455,7 +451,19 @@ export default function ChatPage() {
   }
 
   function clearSession() {
-    setMessages(initialMessages);
+    // Reset back to hydrated seed (not static) so it still feels natural
+    const now = Date.now();
+    const hydrated = seedMessages.map((m, idx) => {
+      const minutesAgo = 12 - idx;
+      const createdAt = now - minutesAgo * 60_000;
+      return {
+        ...m,
+        id: runtimeId(m.role === "assistant" ? "a" : m.role === "user" ? "u" : "s"),
+        createdAt,
+      };
+    });
+
+    setMessages(hydrated);
     setDraftBlocks(null);
     setInput("");
     setIsTyping(false);
@@ -591,9 +599,7 @@ export default function ChatPage() {
                     Sidebar
                   </button>
                 ) : (
-                  <span className="hidden lg:inline-flex text-[11px] text-slate-400">
-                    Coaching notebook
-                  </span>
+                  <span className="hidden lg:inline-flex text-[11px] text-slate-400">Coaching notebook</span>
                 )}
 
                 <div className="flex items-center gap-2">
@@ -627,15 +633,11 @@ export default function ChatPage() {
             {/* Message area */}
             <section className="flex w-full flex-1 flex-col">
               <div className="mx-auto w-full max-w-[980px] px-4 py-8 md:px-6">
-                {/* Header / Title (Notion-like: calm, text-first) */}
+                {/* Header / Title */}
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
-                      Session
-                    </div>
-                    <h1 className="mt-1 text-[22px] font-semibold tracking-tight text-slate-50">
-                      {sessionTitle}
-                    </h1>
+                    <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Session</div>
+                    <h1 className="mt-1 text-[22px] font-semibold tracking-tight text-slate-50">{sessionTitle}</h1>
                     <p className="mt-2 max-w-[70ch] text-[13px] leading-6 text-slate-300">
                       The goal is not motivation — it’s <span className="font-medium text-slate-100">execution</span>.
                       We’ll keep each step small, measurable, and repeatable under pressure.
@@ -676,9 +678,7 @@ export default function ChatPage() {
                               BG
                             </span>
                             <div className="min-w-0">
-                              <div className="text-[11px] font-semibold text-slate-100">
-                                {BRAND.product}
-                              </div>
+                              <div className="text-[11px] font-semibold text-slate-100">{BRAND.product}</div>
                               <div className="text-[10px] text-slate-400">Drafting a response…</div>
                             </div>
                           </div>
@@ -696,11 +696,10 @@ export default function ChatPage() {
                   {/* Input area */}
                   <div className="mt-4 rounded-2xl border border-white/10 bg-black/15 p-3 backdrop-blur-xl">
                     <div className="flex items-center justify-between">
-                      <div className="text-[11px] font-semibold text-slate-300">
-                        Message {BRAND.product}
-                      </div>
+                      <div className="text-[11px] font-semibold text-slate-300">Message {BRAND.product}</div>
                       <div className="text-[10px] text-slate-500">
-                        Press <span className="rounded border border-white/10 bg-white/5 px-1">Enter</span> to send
+                        Press{" "}
+                        <span className="rounded border border-white/10 bg-white/5 px-1">Enter</span> to send
                       </div>
                     </div>
 
@@ -738,22 +737,10 @@ export default function ChatPage() {
 
                     {/* Sub-actions */}
                     <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <MiniChip
-                        label="Build a reset routine"
-                        onClick={() => onDockAction("reset")}
-                      />
-                      <MiniChip
-                        label="Guide a post-game review"
-                        onClick={() => onDockAction("review")}
-                      />
-                      <MiniChip
-                        label="Pre-game focus script"
-                        onClick={() => onDockAction("pregame")}
-                      />
-                      <MiniChip
-                        label="14-day confidence plan"
-                        onClick={() => onDockAction("plan")}
-                      />
+                      <MiniChip label="Build a reset routine" onClick={() => onDockAction("reset")} />
+                      <MiniChip label="Guide a post-game review" onClick={() => onDockAction("review")} />
+                      <MiniChip label="Pre-game focus script" onClick={() => onDockAction("pregame")} />
+                      <MiniChip label="14-day confidence plan" onClick={() => onDockAction("plan")} />
                     </div>
 
                     <div className="mt-3 text-[11px] text-slate-400">
@@ -763,12 +750,12 @@ export default function ChatPage() {
                   </div>
                 </div>
 
-                {/* A Notion-ish “divider” and an optional “coach output preview” */}
+                {/* Divider and “What you’ll get” */}
                 <div className="mt-10 border-t border-white/10 pt-6">
                   <div className="text-[11px] font-semibold text-slate-300">What you’ll get</div>
                   <p className="mt-2 max-w-[72ch] text-[13px] leading-6 text-slate-300">
-                    You leave with something usable: a short routine, a cue, a plan, or a structured reflection — not
-                    vague motivation. When you share a win, we’ll lock it in. When you share a loss, we’ll turn it into a lesson.
+                    You leave with something usable: a short routine, a cue, a plan, or a structured reflection — not vague
+                    motivation. When you share a win, we’ll lock it in. When you share a loss, we’ll turn it into a lesson.
                   </p>
 
                   <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -788,9 +775,7 @@ export default function ChatPage() {
                     <div className="flex items-center justify-between gap-2">
                       <div>
                         <div className="text-[11px] font-semibold text-slate-200">Session notes</div>
-                        <div className="mt-1 text-[10px] text-slate-400">
-                          Keep it short. This is the “one thing” you’re training.
-                        </div>
+                        <div className="mt-1 text-[10px] text-slate-400">Keep it short. This is the “one thing” you’re training.</div>
                       </div>
                       <button
                         onClick={() => setRightRailOpen(false)}
@@ -802,9 +787,7 @@ export default function ChatPage() {
 
                     <div className="mt-3 space-y-3">
                       <div>
-                        <label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                          Title
-                        </label>
+                        <label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Title</label>
                         <input
                           value={sessionTitle}
                           onChange={(e) => setSessionTitle(e.target.value)}
@@ -813,9 +796,7 @@ export default function ChatPage() {
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                          Note
-                        </label>
+                        <label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Note</label>
                         <textarea
                           value={sessionNote}
                           onChange={(e) => setSessionNote(e.target.value)}
@@ -841,7 +822,6 @@ export default function ChatPage() {
                     </div>
                   </div>
 
-                  {/* Fundamental chips */}
                   <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
                     <div className="text-[11px] font-semibold text-slate-200">The 5 Fundamentals</div>
                     <div className="mt-3 grid grid-cols-2 gap-2">
@@ -853,7 +833,6 @@ export default function ChatPage() {
                     </div>
                   </div>
 
-                  {/* Latest coach draft preview */}
                   <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
                     <div className="flex items-center justify-between">
                       <div className="text-[11px] font-semibold text-slate-200">Coach draft</div>
@@ -864,9 +843,7 @@ export default function ChatPage() {
                       <div className="mt-3 space-y-3">
                         {draftBlocks.slice(0, 6).map((b, idx) => (
                           <div key={idx} className="text-[12px] leading-6 text-slate-200">
-                            {b.kind === "h" && (
-                              <div className="text-[12px] font-semibold text-slate-100">{b.text}</div>
-                            )}
+                            {b.kind === "h" && <div className="text-[12px] font-semibold text-slate-100">{b.text}</div>}
                             {b.kind === "p" && <div className="text-slate-200">{b.text}</div>}
                             {b.kind === "quote" && (
                               <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 italic text-slate-200">
@@ -875,9 +852,7 @@ export default function ChatPage() {
                             )}
                             {b.kind === "callout" && (
                               <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                                <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                                  {b.label}
-                                </div>
+                                <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{b.label}</div>
                                 <div className="mt-1 text-slate-200">{b.text}</div>
                               </div>
                             )}
@@ -896,13 +871,10 @@ export default function ChatPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="mt-3 text-[12px] leading-6 text-slate-400">
-                        Send a message to see a structured coach draft here.
-                      </div>
+                      <div className="mt-3 text-[12px] leading-6 text-slate-400">Send a message to see a structured coach draft here.</div>
                     )}
                   </div>
 
-                  {/* Footer */}
                   <div className="mt-4 text-[10px] leading-5 text-slate-500">
                     This UI is intentionally calm. It’s designed to help athletes think clearly when emotions are high.
                   </div>
@@ -929,9 +901,7 @@ function Badge({ label }: { label: string }) {
 function Callout({ label, text }: { label: string; text: string }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-        {label}
-      </div>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">{label}</div>
       <div className="mt-2 text-[13px] leading-6 text-slate-200">{text}</div>
     </div>
   );
@@ -967,14 +937,7 @@ function FundamentalChip({ title, body }: { title: Fundamental; body: string }) 
 }
 
 function SkeletonLine({ short }: { short?: boolean }) {
-  return (
-    <div
-      className={[
-        "h-3 rounded-full bg-white/10",
-        short ? "w-2/3" : "w-full",
-      ].join(" ")}
-    />
-  );
+  return <div className={["h-3 rounded-full bg-white/10", short ? "w-2/3" : "w-full"].join(" ")} />;
 }
 
 /**
@@ -988,13 +951,9 @@ function NotionMessage({ message }: { message: Message }) {
   const fundamental = message.meta?.fundamental;
   const tone = message.meta?.tone ?? "steady";
 
-  // If assistant content is our "markdown-ish" text, render it blocky:
-  // We’ll render headings, callouts, bullets, quotes based on patterns.
-  // (Later we’ll switch to structured JSON from API.)
   const rendered = useMemo(() => {
     if (isUser) return null;
 
-    // Parse simplistic patterns from composeBlockText output
     const lines = message.content.split("\n").map((l) => l.trimEnd());
     const blocks: Array<
       | { kind: "h"; text: string }
@@ -1031,7 +990,6 @@ function NotionMessage({ message }: { message: Message }) {
         continue;
       }
 
-      // [Label] text
       const calloutMatch = line.match(/^\[(.+?)\]\s+(.*)$/);
       if (calloutMatch) {
         flushUl();
@@ -1053,33 +1011,19 @@ function NotionMessage({ message }: { message: Message }) {
   }, [isUser, message.content]);
 
   return (
-    <div
-      className={[
-        "rounded-2xl border border-white/10 px-3 py-3 md:px-4",
-        isUser ? "bg-white/5" : "bg-black/20",
-      ].join(" ")}
-    >
+    <div className={["rounded-2xl border border-white/10 px-3 py-3 md:px-4", isUser ? "bg-white/5" : "bg-black/20"].join(" ")}>
       <div className="flex items-start gap-3">
-        <div
-          className={[
-            "mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-semibold ring-1 ring-white/10",
-            isUser ? "bg-white/10 text-slate-100" : "bg-white/10 text-slate-100",
-          ].join(" ")}
-        >
+        <div className={["mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-semibold ring-1 ring-white/10", "bg-white/10 text-slate-100"].join(" ")}>
           {isUser ? "You" : "BG"}
         </div>
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <div className="text-[11px] font-semibold text-slate-100">
-                {isUser ? "You" : BRAND.product}
-              </div>
+              <div className="text-[11px] font-semibold text-slate-100">{isUser ? "You" : BRAND.product}</div>
 
               {!isUser && fundamental && (
-                <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-                  {fundamental}
-                </span>
+                <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">{fundamental}</span>
               )}
 
               {!isUser && tone && (
@@ -1089,16 +1033,13 @@ function NotionMessage({ message }: { message: Message }) {
               )}
 
               {!isUser && title && (
-                <span className="hidden rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-400 md:inline-flex">
-                  {title}
-                </span>
+                <span className="hidden rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-400 md:inline-flex">{title}</span>
               )}
             </div>
 
             <div className="text-[10px] text-slate-500">{formatTime(message.createdAt)}</div>
           </div>
 
-          {/* Body */}
           <div className="mt-2 text-[14px] leading-7 text-slate-200">
             {isUser ? (
               <p className="whitespace-pre-wrap">{message.content}</p>
@@ -1121,10 +1062,7 @@ function NotionMessage({ message }: { message: Message }) {
                   }
                   if (b.kind === "quote") {
                     return (
-                      <div
-                        key={idx}
-                        className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 italic text-slate-200"
-                      >
+                      <div key={idx} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 italic text-slate-200">
                         {b.text}
                       </div>
                     );
@@ -1132,9 +1070,7 @@ function NotionMessage({ message }: { message: Message }) {
                   if (b.kind === "callout") {
                     return (
                       <div key={idx} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                          {b.label}
-                        </div>
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{b.label}</div>
                         <div className="mt-1 text-slate-200">{b.text}</div>
                       </div>
                     );

@@ -2,93 +2,87 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
-type Role = "user" | "assistant" | "system";
-type Fundamental = "Presence" | "Patience" | "Perspective" | "Poise" | "Perseverance";
+type Role = "user" | "assistant";
+type Fundamental = "Presence" | "Poise" | "Patience" | "Perspective" | "Perseverance";
 
 type Message = {
   id: string;
   role: Role;
   content: string;
-  createdAt: number; // epoch ms
+  createdAt: number;
   meta?: {
     fundamental?: Fundamental;
-    label?: string; // small tag like "Reset" / "Clutch"
+    title?: string;
   };
-};
-
-type Session = {
-  id: string;
-  title: string;
-  updatedAt: number;
-  messages: Message[];
 };
 
 const BRAND = {
   name: "Dr. Brett GPT",
-  subtitle: "Mental game coach for athletes",
+  subtitle: "Mental game coaching for athletes",
 };
 
-const QUICK_ACTIONS: Array<{
-  k: string;
-  title: string;
-  prompt: string;
-  tag: string;
-  fundamental: Fundamental;
-}> = [
+const STARTERS: Array<{ title: string; prompt: string }> = [
   {
-    k: "reset",
-    title: "90s Reset (after mistake)",
+    title: "90-sec reset after a mistake",
     prompt:
       "Build me a 90-second reset routine I can run after a mistake. My sport is ___. The moment I struggle most is ___.",
-    tag: "Reset",
-    fundamental: "Presence",
   },
   {
-    k: "clutch",
-    title: "Clutch cue (late-game)",
+    title: "Pre-game focus cue",
     prompt:
-      "Late in games I rush decisions. Give me one cue + one breath pattern + one next-action focus for the next play.",
-    tag: "Clutch",
-    fundamental: "Poise",
+      "Give me a pre-game cue and a short script for calm execution. My sport is ___. My biggest distraction is ___.",
   },
   {
-    k: "pregame",
-    title: "Pre-game focus script",
+    title: "Late-game pressure plan",
     prompt:
-      "Write a short pre-game script I can read before warm-up. I want to feel ___. My biggest distraction is ___.",
-    tag: "Pre-game",
-    fundamental: "Patience",
+      "Late in games I rush decisions and feel heavy legs. Build me a simple plan for the last 5 minutes.",
   },
   {
-    k: "review",
     title: "5-min post-game review",
     prompt:
-      "Guide me through a 5-minute post-game review. Today I did ___. I struggled with ___. One thing I’ll practice is ___.",
-    tag: "Review",
-    fundamental: "Perspective",
-  },
-  {
-    k: "plan",
-    title: "14-day confidence plan",
-    prompt:
-      "Create a simple 14-day plan to rebuild confidence and consistency. My level is ___. I can commit __ minutes/day.",
-    tag: "Plan",
-    fundamental: "Perseverance",
+      "Guide me through a 5-minute post-game review. Today I did ___. I struggled with ___. One adjustment is ___.",
   },
 ];
 
-/** ---------------- Build-safe ID helpers ---------------- */
-let __uidCounter = 0;
-/** Render-safe deterministic ID (no random/Date) */
-function uid(prefix = "x") {
-  __uidCounter = (__uidCounter + 1) % Number.MAX_SAFE_INTEGER;
-  return `${prefix}_static_${__uidCounter.toString(16)}`;
-}
-/** Runtime ID (browser-only usage) */
-function rid(prefix = "m") {
+const FUNDAMENTALS: Array<{ k: Fundamental; desc: string }> = [
+  { k: "Presence", desc: "Back to now." },
+  { k: "Poise", desc: "Calm under pressure." },
+  { k: "Patience", desc: "Don’t force it." },
+  { k: "Perspective", desc: "Widen the lens." },
+  { k: "Perseverance", desc: "Structure > mood." },
+];
+
+/** Seed transcript (no Date.now at build/prerender) */
+const SEED: Message[] = [
+  {
+    id: "seed_u",
+    role: "user",
+    content:
+      "Late in games I start thinking ahead, my legs feel heavy, and I rush decisions. I know what to do — I just don’t execute.",
+    createdAt: 0,
+  },
+  {
+    id: "seed_a",
+    role: "assistant",
+    content: [
+      "[Poise] Calm execution under pressure.",
+      "",
+      "## One step (last 5 minutes)",
+      "- One slow exhale (shoulders down).",
+      "- Pick **one** job: “next play = ___”.",
+      "- Execute at 90% control, not 110% speed.",
+      "",
+      "## One question",
+      "- What sport and what exact moment triggers the rush?",
+    ].join("\n"),
+    createdAt: 0,
+    meta: { fundamental: "Poise", title: "Last 5 minutes" },
+  },
+];
+
+function runtimeId(prefix = "m") {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return `${prefix}_${crypto.randomUUID()}`;
-  __uidCounter = (__uidCounter + 1) % Number.MAX_SAFE_INTEGER;
-  return `${prefix}_${__uidCounter.toString(16)}`;
+  return `${prefix}_${Date.now().toString(16)}`;
 }
 
 function formatTime(ts: number) {
@@ -100,354 +94,357 @@ function formatTime(ts: number) {
 
 function pickFundamental(text: string): Fundamental {
   const t = text.toLowerCase();
-  if (/(anxious|nervous|racing|overthink|mind|future)/.test(t)) return "Presence";
-  if (/(rush|hurry|force|now|impatient)/.test(t)) return "Patience";
-  if (/(bigger|season|long-term|story|perspective)/.test(t)) return "Perspective";
-  if (/(pressure|clutch|late|tight|choke)/.test(t)) return "Poise";
-  if (/(slump|stuck|again|quit|hard|confidence)/.test(t)) return "Perseverance";
+  if (/(tight|pressure|late|clutch|clock|choke|closing)/.test(t)) return "Poise";
+  if (/(anxious|nervous|overthink|future|what if|racing)/.test(t)) return "Presence";
+  if (/(rush|hurry|fast|now|impatient)/.test(t)) return "Patience";
+  if (/(bigger|season|career|meaning|perspective|story)/.test(t)) return "Perspective";
+  if (/(slump|stuck|again|quit|give up|hard)/.test(t)) return "Perseverance";
   return "Poise";
 }
 
-/** ---------------- Minimal local “coach brain” ---------------- */
-function coachReply(userText: string): { content: string; fundamental: Fundamental; label: string } {
+/** short, “second style” reply */
+function buildCoachReply(userText: string) {
   const f = pickFundamental(userText);
 
-  const header: Record<Fundamental, string> = {
-    Presence: "Presence: bring attention back to what’s real, right now.",
-    Patience: "Patience: slow the game down and trust the process.",
-    Perspective: "Perspective: widen the lens so one moment doesn’t define you.",
-    Poise: "Poise: calm execution under pressure.",
-    Perseverance: "Perseverance: keep showing up with structure, not emotion.",
-  };
-
-  // Keep it short, actionable, athlete-friendly.
-  const blocksByF: Record<Fundamental, string[]> = {
+  const replyByFundamental: Record<Fundamental, string> = {
     Presence: [
-      "Here’s a simple reset you can run in the moment:",
-      "1) **Exhale long** (6–8s). Shoulders down.",
-      "2) **Name what’s true**: “Next play.”",
-      "3) **One job**: pick the *next controllable action* (footwork / first step / target).",
+      "[Presence] Back to now.",
       "",
-      "Quick check: what sport + what’s the exact late-game situation where this shows up most?",
-    ],
-    Patience: [
-      "Your skill is there — the leak is rushing the sequence.",
-      "Try this **3-step tempo cue** for the next rep:",
-      "1) **See it** (one clear picture).",
-      "2) **Breathe** (one slow exhale).",
-      "3) **Do it** (commit to the first action only).",
+      "## One step (20 seconds)",
+      "- Long exhale.",
+      "- Name one controllable: “breath / feet / next rep.”",
+      "- Eyes on target for 2 seconds, then go.",
       "",
-      "Tell me: what’s the *first* action you need to execute (e.g., first dribble, first step, first read)?",
-    ],
-    Perspective: [
-      "Let’s separate the moment from the meaning.",
-      "Run this quick review (2 minutes):",
-      "- What happened (facts only)?",
-      "- What did you control well?",
-      "- What’s one adjustment you’ll practice this week?",
-      "",
-      "If you share the one moment you want back, I’ll turn it into a repeatable cue.",
-    ],
+      "## One question",
+      "- What shows up first when you drift: breath, legs, or thoughts?",
+    ].join("\n"),
+
     Poise: [
-      "Late-game pressure is a **Poise** problem: calm body → clear decision → clean action.",
-      "Use this **Clutch Protocol (15 seconds)**:",
-      "1) **Exhale** (slow).",
-      "2) **Cue**: “Smooth + simple.”",
-      "3) **Narrow focus**: only the next read or next step.",
+      "[Poise] Calm under pressure.",
       "",
-      "What usually breaks first for you — breathing, legs, or decision speed?",
-    ],
+      "## One step (last 5 minutes)",
+      "- One slow exhale (drop shoulders).",
+      "- One cue: “next play.”",
+      "- One job: decide your next action and do it clean.",
+      "",
+      "## One question",
+      "- What sport + what exact moment triggers the rush?",
+    ].join("\n"),
+
+    Patience: [
+      "[Patience] Don’t force results.",
+      "",
+      "## One step (right now)",
+      "- Slow breathing for one cycle.",
+      "- Choose the smallest next action.",
+      "- Do it at 90% control.",
+      "",
+      "## One question",
+      "- Where do you rush most: decisions, mechanics, or shot selection?",
+    ].join("\n"),
+
+    Perspective: [
+      "[Perspective] One moment is data.",
+      "",
+      "## One step (2 minutes)",
+      "- Keep: one thing you did well.",
+      "- Fix: one decision you’ll adjust.",
+      "- Practice: one drill you’ll do this week.",
+      "",
+      "## One question",
+      "- What sport + level are you playing?",
+    ].join("\n"),
+
     Perseverance: [
-      "Confidence comes back fastest with a small, repeatable plan.",
-      "For the next 7 days:",
-      "- 10 minutes fundamentals (same drill daily)",
-      "- 3 reps under pressure (timer / consequence)",
-      "- 60-second reflection: what worked, what to repeat",
+      "[Perseverance] Structure > mood.",
       "",
-      "What’s your current level + how many minutes/day can you realistically commit?",
-    ],
-  };
-
-  const labelByF: Record<Fundamental, string> = {
-    Presence: "Reset",
-    Patience: "Tempo",
-    Perspective: "Review",
-    Poise: "Clutch",
-    Perseverance: "Plan",
+      "## One step (7 days)",
+      "- 10 min/day: fundamentals + one pressure rep.",
+      "- Track: “showed up” ✅ and “cue used” ✅",
+      "",
+      "## One question",
+      "- Minutes/day you can commit + the skill you’re building?",
+    ].join("\n"),
   };
 
   return {
-    content: `**${header[f]}**\n\n${blocksByF[f].join("\n")}`,
     fundamental: f,
-    label: labelByF[f],
+    title: `${f} focus`,
+    content: replyByFundamental[f],
   };
 }
 
-/** ---------------- Seed data (deterministic) ---------------- */
-function seedSession(): Session {
-  return {
-    id: uid("sess"),
-    title: "Session: Today",
-    updatedAt: 0,
-    messages: [
-      { id: uid("sys"), role: "system", content: "Private coaching session. Keep answers practical and athlete-friendly.", createdAt: 0 },
-      { id: uid("a"), role: "assistant", content: "Tell me what you’re training today — pressure, confidence, focus, or bounce-back.", createdAt: 0, meta: { fundamental: "Poise", label: "Start" } },
-      { id: uid("u"), role: "user", content: "Late in games I start thinking ahead, my legs feel heavy, and I rush decisions.", createdAt: 0 },
-    ],
+/** markdown-lite renderer: ##, - bullets, > quote, [Callout] */
+function renderAssistantBlocks(text: string) {
+  const lines = text.split("\n");
+  const blocks: Array<
+    | { kind: "h"; text: string }
+    | { kind: "p"; text: string }
+    | { kind: "quote"; text: string }
+    | { kind: "callout"; label: string; text: string }
+    | { kind: "ul"; items: string[] }
+  > = [];
+
+  let ul: string[] = [];
+  const flushUl = () => {
+    if (ul.length) blocks.push({ kind: "ul", items: ul }), (ul = []);
   };
+
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    const t = line.trim();
+
+    if (!t) {
+      flushUl();
+      continue;
+    }
+    if (t.startsWith("## ")) {
+      flushUl();
+      blocks.push({ kind: "h", text: t.replace(/^##\s+/, "") });
+      continue;
+    }
+    if (t.startsWith("> ")) {
+      flushUl();
+      blocks.push({ kind: "quote", text: t.replace(/^>\s+/, "") });
+      continue;
+    }
+    const calloutMatch = t.match(/^\[(.+?)\]\s+(.*)$/);
+    if (calloutMatch) {
+      flushUl();
+      blocks.push({ kind: "callout", label: calloutMatch[1], text: calloutMatch[2] });
+      continue;
+    }
+    if (t.startsWith("- ")) {
+      ul.push(t.replace(/^- /, ""));
+      continue;
+    }
+    flushUl();
+    blocks.push({ kind: "p", text: t });
+  }
+
+  flushUl();
+  return blocks;
 }
 
-/** ---------------- Page ---------------- */
 export default function ChatPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [sessions, setSessions] = useState<Session[]>(() => [seedSession()]);
-  const [activeId, setActiveId] = useState<string>(() => sessionsInitId());
+  const [leftOpen, setLeftOpen] = useState(true);
+  const [focusOpen, setFocusOpen] = useState(true);
+
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
 
-  // Helper: initial active session id (render-safe)
-  function sessionsInitId() {
-    // This runs at initial render time, using the seed array above.
-    return uid("active"); // placeholder, will be fixed after hydration
-  }
+  const [focusNote, setFocusNote] = useState("Keep the next step small and repeatable under pressure.");
+  const [activeFundamental, setActiveFundamental] = useState<Fundamental>("Poise");
 
-  // Hydrate sessions + activeId after mount (real IDs + timestamps)
+  const [messages, setMessages] = useState<Message[]>(() => SEED);
+
+  // Hydrate timestamps/ids after mount
   useEffect(() => {
     const now = Date.now();
-    const hydrated = [seedSession()].map((s) => ({
-      ...s,
-      id: rid("sess"),
-      updatedAt: now - 2 * 60_000,
-      messages: s.messages.map((m, idx) => ({
+    setMessages((prev) =>
+      prev.map((m, idx) => ({
         ...m,
-        id: rid(m.role === "assistant" ? "a" : m.role === "user" ? "u" : "sys"),
-        createdAt: now - (10 - idx) * 60_000,
-      })),
-    }));
-    setSessions(hydrated);
-    setActiveId(hydrated[0].id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        id: runtimeId(m.role === "assistant" ? "a" : "u"),
+        createdAt: now - (prev.length - idx) * 60_000,
+      }))
+    );
   }, []);
 
-  const active = useMemo(() => sessions.find((s) => s.id === activeId) ?? sessions[0], [sessions, activeId]);
-
-  const lastUser = useMemo(() => {
-    const ms = active?.messages ?? [];
-    for (let i = ms.length - 1; i >= 0; i--) if (ms[i].role === "user") return ms[i].content;
-    return "";
-  }, [active]);
-
-  const focusFundamental = useMemo(() => (lastUser ? pickFundamental(lastUser) : "Poise"), [lastUser]);
-
+  // auto scroll
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [active?.messages?.length, isTyping]);
+  }, [messages.length, isTyping]);
 
-  function newSession() {
-    const now = Date.now();
-    const s: Session = {
-      id: rid("sess"),
-      title: "New session",
-      updatedAt: now,
-      messages: [
-        { id: rid("sys"), role: "system", content: "Private coaching session. Keep answers practical and athlete-friendly.", createdAt: now },
-        { id: rid("a"), role: "assistant", content: "What’s the situation you want to handle better — and when does it show up?", createdAt: now, meta: { fundamental: "Presence", label: "Start" } },
-      ],
+  function pushUser(text: string) {
+    const clean = text.trim();
+    if (!clean) return;
+
+    const m: Message = {
+      id: runtimeId("u"),
+      role: "user",
+      content: clean,
+      createdAt: Date.now(),
     };
-    setSessions((prev) => [s, ...prev]);
-    setActiveId(s.id);
+    setMessages((p) => [...p, m]);
   }
 
-  function applyQuick(prompt: string) {
-    setInput(prompt);
-  }
-
-  async function send() {
-    const text = input.trim();
-    if (!text || !active) return;
-
-    setInput("");
-
-    const userMsg: Message = { id: rid("u"), role: "user", content: text, createdAt: Date.now() };
-
-    setSessions((prev) =>
-      prev.map((s) =>
-        s.id === active.id
-          ? { ...s, updatedAt: Date.now(), messages: [...s.messages, userMsg], title: s.title === "New session" ? "Session: Training" : s.title }
-          : s
-      )
-    );
-
-    // local demo typing + reply
+  async function simulateReply(userText: string) {
     setIsTyping(true);
-    await new Promise((r) => setTimeout(r, Math.min(1400, 650 + text.length * 8)));
 
-    const reply = coachReply(text);
-    const assistantMsg: Message = {
-      id: rid("a"),
+    const reply = buildCoachReply(userText);
+    setActiveFundamental(reply.fundamental);
+
+    await new Promise((r) => setTimeout(r, Math.min(1100, 450 + userText.length * 7)));
+
+    const m: Message = {
+      id: runtimeId("a"),
       role: "assistant",
       content: reply.content,
       createdAt: Date.now(),
-      meta: { fundamental: reply.fundamental, label: reply.label },
+      meta: { fundamental: reply.fundamental, title: reply.title },
     };
 
-    setSessions((prev) =>
-      prev.map((s) => (s.id === active.id ? { ...s, updatedAt: Date.now(), messages: [...s.messages, assistantMsg] } : s))
-    );
+    setMessages((p) => [...p, m]);
     setIsTyping(false);
-
-    // Later swap this entire block with:
-    // const res = await fetch("/api/chat", { method:"POST", body: JSON.stringify({ messages: ... }) })
-    // const data = await res.json(); push assistant message from data.
   }
 
-  function resetActive() {
-    // soft reset: keep session but wipe back to 2 starter messages
-    const now = Date.now();
-    setSessions((prev) =>
-      prev.map((s) =>
-        s.id === active?.id
-          ? {
-              ...s,
-              updatedAt: now,
-              messages: [
-                { id: rid("sys"), role: "system", content: "Private coaching session. Keep answers practical and athlete-friendly.", createdAt: now },
-                { id: rid("a"), role: "assistant", content: "What’s the situation you want to handle better — and when does it show up?", createdAt: now, meta: { fundamental: "Poise", label: "Start" } },
-              ],
-            }
-          : s
-      )
-    );
-    setIsTyping(false);
+  async function onSend() {
+    const text = input.trim();
+    if (!text || isTyping) return;
     setInput("");
+    pushUser(text);
+    await simulateReply(text);
+  }
+
+  function resetSession() {
+    const now = Date.now();
+    setMessages(
+      SEED.map((m, idx) => ({
+        ...m,
+        id: runtimeId(m.role === "assistant" ? "a" : "u"),
+        createdAt: now - (SEED.length - idx) * 60_000,
+      }))
+    );
+    setInput("");
+    setIsTyping(false);
+    setActiveFundamental("Poise");
+    setFocusNote("Keep the next step small and repeatable under pressure.");
+  }
+
+  function exportTranscript() {
+    const lines: string[] = [];
+    lines.push(`# ${BRAND.name} — Transcript`);
+    lines.push(`Focus: ${activeFundamental}`);
+    lines.push(`Note: ${focusNote}`);
+    lines.push("");
+
+    for (const m of messages) {
+      const who = m.role === "user" ? "You" : BRAND.name;
+      lines.push(`**${who}** (${formatTime(m.createdAt)}):`);
+      lines.push(m.content.trim());
+      lines.push("");
+    }
+
+    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `dr-brett-gpt-transcript-${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   return (
     <div className="min-h-screen bg-[#0b0f19] text-slate-100">
       {/* subtle background */}
       <div className="pointer-events-none fixed inset-0 opacity-70">
-        <div className="absolute -top-24 left-1/2 h-[420px] w-[920px] -translate-x-1/2 rounded-full bg-gradient-to-b from-white/10 via-white/0 to-transparent blur-3xl" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(90,79,246,0.10),transparent_40%),radial-gradient(circle_at_75%_20%,rgba(58,166,255,0.10),transparent_45%),radial-gradient(circle_at_55%_90%,rgba(244,197,66,0.06),transparent_45%)]" />
+        <div className="absolute -top-28 left-1/2 h-[420px] w-[920px] -translate-x-1/2 rounded-full bg-gradient-to-b from-white/10 via-white/0 to-transparent blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(90,79,246,0.12),transparent_38%),radial-gradient(circle_at_80%_20%,rgba(58,166,255,0.10),transparent_42%),radial-gradient(circle_at_55%_90%,rgba(244,197,66,0.07),transparent_45%)]" />
       </div>
 
       <div className="relative mx-auto flex min-h-screen max-w-[1400px]">
-        {/* Sidebar */}
+        {/* LEFT: Start Fast */}
         <aside
           className={[
-            "hidden lg:flex h-screen w-[320px] shrink-0 flex-col border-r border-white/10 bg-black/10 backdrop-blur-xl",
-            sidebarOpen ? "" : "w-0 overflow-hidden opacity-0",
+            "hidden h-screen w-[320px] shrink-0 border-r border-white/10 bg-black/10 backdrop-blur-xl lg:flex lg:flex-col",
+            leftOpen ? "" : "w-0 overflow-hidden",
           ].join(" ")}
         >
-          <div className="flex items-center justify-between px-5 py-4">
+          <div className="flex items-center justify-between px-5 py-5">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-[11px] font-semibold ring-1 ring-white/10">
                 BG
               </div>
               <div className="leading-tight">
-                <div className="text-sm font-semibold tracking-tight">{BRAND.name}</div>
+                <div className="text-sm font-semibold tracking-tight text-slate-50">{BRAND.name}</div>
                 <div className="text-[11px] text-slate-400">{BRAND.subtitle}</div>
               </div>
             </div>
+
             <button
-              onClick={() => setSidebarOpen(false)}
+              onClick={() => setLeftOpen(false)}
               className="rounded-lg px-2 py-1 text-[11px] text-slate-300 hover:bg-white/5 hover:text-slate-100"
+              title="Collapse"
             >
               Collapse
             </button>
           </div>
 
           <div className="px-5">
-            <button
-              onClick={newSession}
-              className="w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-left text-[12px] font-semibold hover:bg-white/15"
-            >
-              + New session
-            </button>
-
-            <div className="mt-4">
-              <div className="mb-2 text-[11px] font-semibold text-slate-300">Sessions</div>
-              <div className="space-y-2">
-                {sessions.map((s) => (
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div className="text-[11px] font-semibold text-slate-200">Start fast</div>
+              <div className="mt-2 space-y-2">
+                {STARTERS.map((s) => (
                   <button
-                    key={s.id}
-                    onClick={() => setActiveId(s.id)}
-                    className={[
-                      "w-full rounded-xl border border-white/10 px-3 py-2 text-left hover:bg-white/5",
-                      s.id === activeId ? "bg-white/10" : "bg-black/15",
-                    ].join(" ")}
+                    key={s.title}
+                    onClick={() => setInput(s.prompt)}
+                    className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left hover:bg-white/10"
                   >
-                    <div className="text-[12px] font-semibold text-slate-100 line-clamp-1">{s.title}</div>
-                    <div className="mt-0.5 text-[10px] text-slate-400">Updated {s.updatedAt ? formatTime(s.updatedAt) : "—"}</div>
+                    <div className="text-[12px] font-medium text-slate-100">{s.title}</div>
+                    <div className="mt-0.5 line-clamp-2 text-[10px] text-slate-400">{s.prompt}</div>
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="mt-6">
-              <div className="mb-2 text-[11px] font-semibold text-slate-300">Quick actions</div>
-              <div className="space-y-2">
-                {QUICK_ACTIONS.map((a) => (
-                  <button
-                    key={a.k}
-                    onClick={() => applyQuick(a.prompt)}
-                    className="w-full rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-left hover:bg-white/5"
-                    title={a.prompt}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="text-[12px] font-semibold text-slate-100">{a.title}</div>
-                      <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-                        {a.fundamental}
-                      </span>
-                    </div>
-                    <div className="mt-1 line-clamp-1 text-[10px] text-slate-400">{a.tag}</div>
-                  </button>
-                ))}
+            <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div className="text-[11px] font-semibold text-slate-200">Session</div>
+              <div className="mt-2 flex gap-2">
+                <button
+                  onClick={exportTranscript}
+                  className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[12px] hover:bg-white/10"
+                >
+                  Export
+                </button>
+                <button
+                  onClick={resetSession}
+                  className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[12px] hover:bg-white/10"
+                >
+                  Reset
+                </button>
+              </div>
+              <div className="mt-2 text-[10px] text-slate-500">
+                Export a transcript to review with your coach/parent if helpful.
               </div>
             </div>
           </div>
 
-          <div className="mt-auto px-5 pb-5 pt-4">
-            <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
-              <div className="text-[11px] font-semibold text-slate-300">Safety</div>
-              <div className="mt-2 text-[11px] leading-5 text-slate-400">
-                Coaching only — not medical care. If you’re in crisis, seek immediate local professional help.
-              </div>
-            </div>
+          <div className="mt-auto px-5 pb-5 pt-4 text-[10px] leading-5 text-slate-500">
+            Coaching support only — not medical or therapeutic care.
           </div>
         </aside>
 
-        {/* Main */}
-        <main className="relative z-10 flex min-h-screen flex-1 flex-col">
+        {/* MAIN */}
+        <main className="flex min-h-screen flex-1 flex-col">
           {/* Top bar */}
-          <div className="sticky top-0 z-20 border-b border-white/10 bg-black/10 backdrop-blur-xl">
-            <div className="mx-auto flex max-w-[1100px] items-center justify-between px-4 py-3 md:px-6">
-              <div className="flex items-center gap-3">
-                {!sidebarOpen && (
+          <div className="sticky top-0 z-30 border-b border-white/10 bg-black/20 backdrop-blur-xl">
+            <div className="mx-auto flex max-w-[980px] items-center justify-between px-4 py-3 md:px-6">
+              <div className="flex items-center gap-2">
+                {!leftOpen && (
                   <button
-                    onClick={() => setSidebarOpen(true)}
-                    className="hidden lg:inline-flex rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-slate-200 hover:bg-white/10"
+                    onClick={() => setLeftOpen(true)}
+                    className="hidden rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-slate-200 hover:bg-white/10 lg:inline-flex"
                   >
-                    Sidebar
+                    Menu
                   </button>
                 )}
-                <div className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/90" />
-                  <span className="text-[11px] text-slate-300">
-                    {BRAND.name} <span className="text-slate-500">•</span>{" "}
-                    <span className="text-slate-400">{isTyping ? "Thinking…" : "Online"}</span>
+                <div className="text-[12px] text-slate-300">
+                  Focus:{" "}
+                  <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] text-slate-200">
+                    {activeFundamental}
                   </span>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={resetActive}
+                  onClick={() => setFocusOpen((v) => !v)}
                   className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] text-slate-100 hover:bg-white/10"
                 >
-                  Reset chat
+                  Focus panel
                 </button>
                 <a
                   href="/"
@@ -459,123 +456,145 @@ export default function ChatPage() {
             </div>
           </div>
 
-          <div className="mx-auto flex w-full max-w-[1100px] flex-1 gap-6 px-4 py-6 md:px-6">
-            {/* Chat column */}
-            <section className="flex min-w-0 flex-1 flex-col">
-              {/* Fundamentals strip (athlete-specific highlight, minimal) */}
-              <div className="mb-4 flex flex-wrap gap-2">
-                {(["Presence", "Poise", "Patience", "Perspective", "Perseverance"] as Fundamental[]).map((f) => (
-                  <span
-                    key={f}
-                    className={[
-                      "rounded-full border border-white/10 px-3 py-1 text-[11px]",
-                      f === focusFundamental ? "bg-white/10 text-slate-100" : "bg-white/5 text-slate-300",
-                    ].join(" ")}
-                    title={f}
-                  >
-                    {f}
-                  </span>
-                ))}
-              </div>
+          <div className="mx-auto flex w-full max-w-[1200px] flex-1">
+            {/* Chat */}
+            <section className="flex flex-1 flex-col">
+              <div className="mx-auto flex w-full max-w-[980px] flex-1 flex-col px-4 py-6 md:px-6">
+                <div className="mb-4">
+                  <h1 className="text-[18px] font-semibold tracking-tight text-slate-50">{BRAND.name}</h1>
+                  <p className="mt-1 max-w-[72ch] text-[13px] leading-6 text-slate-300">
+                    Short, actionable coaching. One step you can run today.
+                  </p>
+                </div>
 
-              {/* Messages */}
-              <div
-                ref={scrollerRef}
-                className="min-h-0 flex-1 overflow-auto rounded-2xl border border-white/10 bg-black/10 backdrop-blur-xl"
-              >
-                <div className="space-y-4 p-4 md:p-5">
-                  {(active?.messages ?? []).filter((m) => m.role !== "system").map((m) => (
-                    <ChatRow key={m.id} message={m} />
-                  ))}
+                <div
+                  ref={scrollerRef}
+                  className="flex-1 overflow-auto rounded-2xl border border-white/10 bg-black/15 p-3 backdrop-blur-xl md:p-4"
+                >
+                  <div className="space-y-4">
+                    {messages.map((m) => (
+                      <ChatMessage key={m.id} m={m} />
+                    ))}
 
-                  {isTyping && (
-                    <div className="flex gap-3">
-                      <Avatar label="BG" />
-                      <div className="max-w-[82ch] rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-                        <div className="text-[11px] font-semibold text-slate-100">{BRAND.name}</div>
-                        <div className="mt-2 space-y-2">
-                          <div className="h-3 w-full rounded-full bg-white/10" />
-                          <div className="h-3 w-5/6 rounded-full bg-white/10" />
-                          <div className="h-3 w-2/3 rounded-full bg-white/10" />
+                    {isTyping && (
+                      <div className="flex gap-3">
+                        <div className="mt-1 h-8 w-8 shrink-0 rounded-xl bg-white/10 ring-1 ring-white/10 flex items-center justify-center text-[11px] font-semibold">
+                          BG
+                        </div>
+                        <div className="w-full rounded-2xl border border-white/10 bg-white/5 p-4">
+                          <div className="h-3 w-1/3 rounded-full bg-white/10" />
+                          <div className="mt-3 space-y-2">
+                            <div className="h-3 w-full rounded-full bg-white/10" />
+                            <div className="h-3 w-5/6 rounded-full bg-white/10" />
+                            <div className="h-3 w-2/3 rounded-full bg-white/10" />
+                          </div>
                         </div>
                       </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Composer */}
+                <div className="mt-4 rounded-2xl border border-white/10 bg-black/15 p-3 backdrop-blur-xl md:p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[11px] font-semibold text-slate-300">Message</div>
+                    <div className="text-[10px] text-slate-500">Enter to send • Shift+Enter new line</div>
+                  </div>
+
+                  <div className="mt-2 flex gap-2">
+                    <textarea
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          void onSend();
+                        }
+                      }}
+                      rows={3}
+                      placeholder="What happened? When does it show up? What do you want to execute better?"
+                      className="w-full resize-none rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-[14px] leading-6 text-slate-100 placeholder:text-slate-500 outline-none focus:border-white/20"
+                    />
+
+                    <div className="flex shrink-0 flex-col gap-2">
+                      <button
+                        onClick={() => void onSend()}
+                        disabled={!input.trim() || isTyping}
+                        className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-[12px] font-semibold text-slate-100 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Send
+                      </button>
+                      <button
+                        onClick={resetSession}
+                        className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-[12px] text-slate-200 hover:bg-white/10"
+                      >
+                        Reset
+                      </button>
                     </div>
-                  )}
-                </div>
-              </div>
+                  </div>
 
-              {/* Composer */}
-              <div className="mt-4 rounded-2xl border border-white/10 bg-black/10 p-3 backdrop-blur-xl">
-                <div className="flex items-end gap-2">
-                  <textarea
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        void send();
-                      }
-                    }}
-                    rows={3}
-                    placeholder="Describe the moment. Where does it break: breathing, focus, confidence, or decision speed?"
-                    className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[14px] leading-6 text-slate-100 placeholder:text-slate-500 outline-none focus:border-white/20"
-                  />
-                  <button
-                    onClick={() => void send()}
-                    disabled={!input.trim() || isTyping}
-                    className="h-[46px] shrink-0 rounded-xl border border-white/10 bg-white/10 px-4 text-[12px] font-semibold text-slate-100 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Send
-                  </button>
-                </div>
-
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {QUICK_ACTIONS.slice(0, 3).map((a) => (
-                    <button
-                      key={a.k}
-                      onClick={() => applyQuick(a.prompt)}
-                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] text-slate-200 hover:bg-white/10"
-                    >
-                      {a.tag}
-                    </button>
-                  ))}
+                  <div className="mt-3 text-[11px] text-slate-400">
+                    Tip: include your <span className="text-slate-200">sport</span> + the{" "}
+                    <span className="text-slate-200">exact moment</span> it breaks down.
+                  </div>
                 </div>
               </div>
             </section>
 
-            {/* Focus panel (simple, athlete-specific value) */}
-            <aside className="hidden w-[320px] shrink-0 lg:block">
-              <div className="sticky top-[84px] space-y-4">
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-                  <div className="text-[11px] font-semibold text-slate-300">Focus for this session</div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <div className="text-[13px] font-semibold text-slate-100">{focusFundamental}</div>
-                    <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-                      Auto-detected
-                    </span>
+            {/* Right: Focus panel */}
+            {focusOpen && (
+              <aside className="relative hidden w-[360px] shrink-0 border-l border-white/10 bg-black/10 backdrop-blur-xl xl:block">
+                <div className="sticky top-[52px] p-5">
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-[11px] font-semibold text-slate-200">Focus</div>
+                        <div className="mt-1 text-[10px] text-slate-400">One note for this session.</div>
+                      </div>
+                      <button
+                        onClick={() => setFocusOpen(false)}
+                        className="rounded-lg px-2 py-1 text-[11px] text-slate-300 hover:bg-white/5 hover:text-slate-100"
+                      >
+                        Close
+                      </button>
+                    </div>
+
+                    <textarea
+                      value={focusNote}
+                      onChange={(e) => setFocusNote(e.target.value)}
+                      rows={4}
+                      className="mt-3 w-full resize-none rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-[12px] leading-6 text-slate-100 outline-none focus:border-white/20"
+                    />
                   </div>
-                  <p className="mt-2 text-[12px] leading-6 text-slate-300">
-                    Keep it simple: calm body → clear next action → repeatable routine.
-                  </p>
-                </div>
 
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-                  <div className="text-[11px] font-semibold text-slate-300">How to use this GPT</div>
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-[12px] leading-6 text-slate-300">
-                    <li>Describe the exact moment (time + situation).</li>
-                    <li>Say what breaks first (breath / legs / decision).</li>
-                    <li>Ask for one cue + one routine you can repeat.</li>
-                  </ul>
-                </div>
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="text-[11px] font-semibold text-slate-200">The 5 Fundamentals</div>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      {FUNDAMENTALS.map((f) => (
+                        <button
+                          key={f.k}
+                          onClick={() => setActiveFundamental(f.k)}
+                          className={[
+                            "rounded-2xl border border-white/10 px-3 py-2 text-left hover:bg-white/5",
+                            activeFundamental === f.k ? "bg-white/10" : "bg-white/5",
+                          ].join(" ")}
+                        >
+                          <div className="text-[11px] font-semibold text-slate-100">{f.k}</div>
+                          <div className="mt-0.5 text-[10px] text-slate-400">{f.desc}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-                  <div className="text-[11px] font-semibold text-slate-300">Demo mode</div>
-                  <p className="mt-2 text-[12px] leading-6 text-slate-300">
-                    Replies are simulated locally for design review. Later, swap the responder with <code className="text-slate-200">/api/chat</code>.
-                  </p>
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="text-[11px] font-semibold text-slate-200">Why it’s built this way</div>
+                    <p className="mt-2 text-[12px] leading-6 text-slate-300">
+                      Low noise. Clear steps. Designed for athletes who need calm decisions fast.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </aside>
+              </aside>
+            )}
           </div>
         </main>
       </div>
@@ -583,47 +602,81 @@ export default function ChatPage() {
   );
 }
 
-/** ---------------- UI bits ---------------- */
-function Avatar({ label }: { label: string }) {
+function ChatMessage({ m }: { m: Message }) {
+  const isUser = m.role === "user";
+
   return (
-    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-[11px] font-semibold ring-1 ring-white/10">
-      {label}
+    <div className={["flex gap-3", isUser ? "justify-end" : "justify-start"].join(" ")}>
+      {!isUser && (
+        <div className="mt-1 h-8 w-8 shrink-0 rounded-xl bg-white/10 ring-1 ring-white/10 flex items-center justify-center text-[11px] font-semibold">
+          BG
+        </div>
+      )}
+
+      <div
+        className={[
+          "max-w-[820px] rounded-2xl border border-white/10 p-4",
+          isUser ? "bg-white/10" : "bg-black/20",
+        ].join(" ")}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-[11px] font-semibold text-slate-200">{isUser ? "You" : BRAND.name}</div>
+
+          <div className="flex items-center gap-2">
+            {!isUser && m.meta?.fundamental && (
+              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
+                {m.meta.fundamental}
+              </span>
+            )}
+            <div className="text-[10px] text-slate-500">{m.createdAt ? formatTime(m.createdAt) : ""}</div>
+          </div>
+        </div>
+
+        <div className="mt-2 text-[14px] leading-7 text-slate-100">
+          {isUser ? <p className="whitespace-pre-wrap">{m.content}</p> : <AssistantContent text={m.content} />}
+        </div>
+      </div>
+
+      {isUser && (
+        <div className="mt-1 h-8 w-8 shrink-0 rounded-xl bg-white/10 ring-1 ring-white/10 flex items-center justify-center text-[11px] font-semibold">
+          You
+        </div>
+      )}
     </div>
   );
 }
 
-function ChatRow({ message }: { message: Message }) {
-  const isUser = message.role === "user";
-  return (
-    <div className={["flex gap-3", isUser ? "justify-start" : "justify-start"].join(" ")}>
-      <Avatar label={isUser ? "You" : "BG"} />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="text-[11px] font-semibold text-slate-100">{isUser ? "You" : BRAND.name}</div>
-            {!isUser && message.meta?.fundamental && (
-              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-                {message.meta.fundamental}
-              </span>
-            )}
-            {!isUser && message.meta?.label && (
-              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-400">
-                {message.meta.label}
-              </span>
-            )}
-          </div>
-          <div className="text-[10px] text-slate-500">{message.createdAt ? formatTime(message.createdAt) : "—"}</div>
-        </div>
+function AssistantContent({ text }: { text: string }) {
+  const blocks = useMemo(() => renderAssistantBlocks(text), [text]);
 
-        <div
-          className={[
-            "mt-2 max-w-[82ch] rounded-2xl border border-white/10 px-4 py-3 text-[14px] leading-7",
-            isUser ? "bg-white/5 text-slate-100" : "bg-black/20 text-slate-200",
-          ].join(" ")}
-        >
-          <div className="whitespace-pre-wrap">{message.content}</div>
-        </div>
-      </div>
+  return (
+    <div className="space-y-3">
+      {blocks.map((b, idx) => {
+        if (b.kind === "h") return <div key={idx} className="text-[14px] font-semibold text-slate-50">{b.text}</div>;
+        if (b.kind === "p") return <p key={idx} className="whitespace-pre-wrap text-slate-100">{b.text}</p>;
+        if (b.kind === "quote")
+          return (
+            <div key={idx} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 italic text-slate-200">
+              {b.text}
+            </div>
+          );
+        if (b.kind === "callout")
+          return (
+            <div key={idx} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{b.label}</div>
+              <div className="mt-1 text-slate-200">{b.text}</div>
+            </div>
+          );
+        if (b.kind === "ul")
+          return (
+            <ul key={idx} className="list-disc space-y-1 pl-5 text-slate-100">
+              {b.items.map((it, i) => (
+                <li key={i}>{it}</li>
+              ))}
+            </ul>
+          );
+        return null;
+      })}
     </div>
   );
 }

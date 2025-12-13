@@ -95,14 +95,9 @@ function uid(prefix = "x") {
 /** Runtime ID (event handlers / effects only) */
 function rid(prefix = "m") {
   // IMPORTANT: call only in effects or user events (not during render)
-  try {
-    if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-      // @ts-expect-error - randomUUID exists in modern browsers
-      return `${prefix}_${crypto.randomUUID()}`;
-    }
-  } catch {
-    // ignore
-  }
+  const c = (globalThis as any)?.crypto as Crypto | undefined;
+  if (c?.randomUUID) return `${prefix}_${c.randomUUID()}`;
+
   __uidCounter = (__uidCounter + 1) % Number.MAX_SAFE_INTEGER;
   return `${prefix}_${__uidCounter.toString(16)}`;
 }
@@ -127,10 +122,10 @@ function pickFundamental(text: string): Fundamental {
 
 function detectTone(text: string): Tone {
   const t = text.toLowerCase();
-  const win = /(won|win|crushed|great|best|proud|good game|played well|nailed|improved|dominated|personal best|pb)/.test(
-    t
-  );
-  const loss = /(lost|loss|terrible|awful|hate|failed|embarrass|choked|disappointed|bummed|frustrated|angry)/.test(t);
+  const win =
+    /(won|win|crushed|great|best|proud|good game|played well|nailed|improved|dominated|personal best|pb)/.test(t);
+  const loss =
+    /(lost|loss|terrible|awful|hate|failed|embarrass|choked|disappointed|bummed|frustrated|angry)/.test(t);
   if (win && !loss) return "celebrate";
   if (loss) return "reframe";
   return "steady";
@@ -157,7 +152,6 @@ function coachReply(userText: string): { content: string; fundamental: Fundament
     Perseverance: "Plan",
   };
 
-  // Core blocks by fundamental (steady baseline)
   const baseByF: Record<Fundamental, string[]> = {
     Presence: [
       "Here’s a simple reset you can run in the moment:",
@@ -205,7 +199,6 @@ function coachReply(userText: string): { content: string; fundamental: Fundament
     ],
   };
 
-  // Tone overlays (celebrate / reframe) – calm, not hypey
   const celebrateOverlay: string[] = [
     "Good. Don’t rush past that.",
     "A real win isn’t just the scoreboard — it’s the moment you stayed composed when it mattered.",
@@ -230,46 +223,29 @@ function coachReply(userText: string): { content: string; fundamental: Fundament
     "Share the moment you want back and I’ll build a reset so that pattern doesn’t repeat.",
   ];
 
-  // Compose response:
-  // - Always include the fundamental frame
-  // - If celebrate/reframe: lead with tone overlay, then give the fundamental tool (shortened)
-  const contentLines: string[] = [];
-  contentLines.push(`**${header[f]}**`);
-  contentLines.push("");
+  const lines: string[] = [];
+  lines.push(`**${header[f]}**`, "");
 
   if (tone === "celebrate") {
-    contentLines.push(...celebrateOverlay);
-    contentLines.push("");
-    contentLines.push("## Keep it simple for next time");
-    contentLines.push(...shallowTool(baseByF[f]));
+    lines.push(...celebrateOverlay, "", "## Keep it simple for next time", ...shallowTool(baseByF[f]));
   } else if (tone === "reframe") {
-    contentLines.push(...reframeOverlay);
-    contentLines.push("");
-    contentLines.push("## One clean step forward");
-    contentLines.push(...shallowTool(baseByF[f]));
+    lines.push(...reframeOverlay, "", "## One clean step forward", ...shallowTool(baseByF[f]));
   } else {
-    contentLines.push(...baseByF[f]);
+    lines.push(...baseByF[f]);
   }
 
-  return {
-    content: contentLines.join("\n"),
-    fundamental: f,
-    label: labelByF[f],
-    tone,
-  };
+  return { content: lines.join("\n"), fundamental: f, label: labelByF[f], tone };
 }
 
-/** Keep tools short when tone overlay exists (avoid wall-of-text) */
 function shallowTool(lines: string[]): string[] {
-  // Keep first ~7 non-empty lines + last prompt line if present
   const compact: string[] = [];
   let nonEmpty = 0;
-  for (let i = 0; i < lines.length; i++) {
-    const l = lines[i];
+
+  for (const l of lines) {
     if (l.trim()) nonEmpty++;
     if (nonEmpty <= 7) compact.push(l);
   }
-  // Ensure we end with a question / prompt if one exists later
+
   for (let i = lines.length - 1; i >= 0; i--) {
     const l = lines[i].trim();
     if (l.endsWith("?")) {
@@ -322,10 +298,6 @@ function getResponderMode(): ChatResponderMode {
   return v === "api" ? "api" : "local";
 }
 
-/**
- * Minimal request payload for /api/chat (you can adapt to your backend shape).
- * Non-streaming expects JSON response { reply: string }.
- */
 async function callApiChatNonStreaming(payload: {
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
 }) {
@@ -346,19 +318,10 @@ async function callApiChatNonStreaming(payload: {
   return reply;
 }
 
-/**
- * Streaming seam stub (SSE / chunked).
- * Keep it here so swapping later is trivial.
- */
 async function callApiChatStreaming(_payload: {
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
   onToken: (token: string) => void;
 }) {
-  // TODO: Implement when your /api/chat streams.
-  // Example approach:
-  // - fetch("/api/chat", { method:"POST", body: JSON.stringify(payload) })
-  // - ReadableStream reader = res.body.getReader()
-  // - decode chunks and call onToken()
   throw new Error("Streaming not implemented yet.");
 }
 
@@ -370,7 +333,7 @@ async function safeReadText(res: Response) {
   }
 }
 
-/** ---------------- Assistant block rendering (minimal markdown-ish) ---------------- */
+/** ---------------- Assistant block rendering ---------------- */
 type RenderBlock =
   | { kind: "h"; text: string }
   | { kind: "p"; text: string }
@@ -398,7 +361,6 @@ function parseAssistantBlocks(text: string): RenderBlock[] {
 
   for (const raw of lines) {
     const line = raw.trim();
-
     if (!line) {
       flushLists();
       continue;
@@ -416,14 +378,12 @@ function parseAssistantBlocks(text: string): RenderBlock[] {
       continue;
     }
 
-    // Numbered list: "1) " or "1. "
     const olMatch = line.match(/^\d+(\)|\.)\s+(.*)$/);
     if (olMatch) {
       ol.push(olMatch[2]);
       continue;
     }
 
-    // Bullets: "- "
     if (line.startsWith("- ")) {
       ul.push(line.replace(/^- /, ""));
       continue;
@@ -437,7 +397,6 @@ function parseAssistantBlocks(text: string): RenderBlock[] {
   return blocks;
 }
 
-/** Inline bold rendering for **text** (minimal) */
 function InlineMarkdown({ text }: { text: string }) {
   const parts: Array<{ t: string; bold: boolean }> = [];
   const re = /\*\*(.+?)\*\*/g;
@@ -468,6 +427,27 @@ function InlineMarkdown({ text }: { text: string }) {
   );
 }
 
+/** ---------------- localStorage helpers ---------------- */
+function readStorage(): { sessions: Session[]; activeId: string } | null {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { sessions?: Session[]; activeId?: string };
+    if (!parsed.sessions?.length || !parsed.activeId) return null;
+    return { sessions: parsed.sessions, activeId: parsed.activeId };
+  } catch {
+    return null;
+  }
+}
+
+function writeStorage(data: { sessions: Session[]; activeId: string }) {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch {
+    // ignore
+  }
+}
+
 /** ---------------- Page ---------------- */
 export default function ChatPage() {
   const responderMode = useMemo(getResponderMode, []);
@@ -495,7 +475,6 @@ export default function ChatPage() {
       return;
     }
 
-    // If no stored state, hydrate seed into real runtime IDs and timestamps
     const seeded = seedSessionStatic();
     const hydrated: Session = {
       ...seeded,
@@ -516,8 +495,6 @@ export default function ChatPage() {
 
   // Persist changes (debounced)
   useEffect(() => {
-    // Avoid writing the static seed before hydration happens
-    // If activeId still looks static, skip.
     if (activeId.includes("_static_")) return;
 
     const t = window.setTimeout(() => {
@@ -605,11 +582,8 @@ export default function ChatPage() {
     setInput("");
   }
 
-  /** Build request messages for API seam */
   function buildApiPayloadMessages(session: Session) {
-    // Keep it simple: include system + last N messages
     const all = session.messages.map((m) => ({ role: m.role, content: m.content }));
-    // Cap to last 20 (plus system if present)
     const system = all.find((m) => m.role === "system");
     const rest = all.filter((m) => m.role !== "system").slice(-20);
     return [...(system ? [system] : []), ...rest] as Array<{
@@ -629,7 +603,6 @@ export default function ChatPage() {
     const now = Date.now();
     const userMsg: Message = { id: rid("u"), role: "user", content: text, createdAt: now };
 
-    // optimistic append user message
     setSessions((prev) =>
       prev.map((s) =>
         s.id === active.id
@@ -646,10 +619,10 @@ export default function ChatPage() {
     setIsTyping(true);
 
     try {
-      // --------- Seam: local vs /api/chat ---------
       if (responderMode === "api") {
-        // Non-streaming first:
-        const payload = { messages: buildApiPayloadMessages({ ...active, messages: [...active.messages, userMsg] }) };
+        const payload = {
+          messages: buildApiPayloadMessages({ ...active, messages: [...active.messages, userMsg] }),
+        };
         const replyText = await callApiChatNonStreaming(payload);
 
         const assistantMsg: Message = {
@@ -670,7 +643,6 @@ export default function ChatPage() {
           )
         );
       } else {
-        // Local demo typing + reply
         await new Promise((r) => setTimeout(r, Math.min(1400, 650 + text.length * 8)));
 
         const reply = coachReply(text);
@@ -689,21 +661,8 @@ export default function ChatPage() {
         );
       }
 
-      // ---------- Streaming seam (later) ----------
-      // When you implement streaming on /api/chat:
-      // - Create an assistant message placeholder with empty content
-      // - Append tokens into it as they arrive
-      //
-      // Example skeleton:
-      // if (responderMode === "api") {
-      //   const placeholderId = rid("a");
-      //   append assistant placeholder {id: placeholderId, content:""}
-      //   await callApiChatStreaming({ messages: payload.messages, onToken:(tok)=> updateAssistant(placeholderId, tok) });
-      // }
-
-    } catch (err: any) {
-      // Minimal production-safe fallback:
-      // Keep visuals unchanged; append a calm error assistant message
+      // Streaming seam is intentionally stubbed in callApiChatStreaming()
+    } catch {
       const assistantMsg: Message = {
         id: rid("a"),
         role: "assistant",
@@ -714,7 +673,9 @@ export default function ChatPage() {
       };
 
       setSessions((prev) =>
-        prev.map((s) => (s.id === active.id ? { ...s, updatedAt: Date.now(), messages: [...s.messages, assistantMsg] } : s))
+        prev.map((s) =>
+          s.id === active.id ? { ...s, updatedAt: Date.now(), messages: [...s.messages, assistantMsg] } : s
+        )
       );
     } finally {
       setIsTyping(false);
@@ -776,7 +737,9 @@ export default function ChatPage() {
                     ].join(" ")}
                   >
                     <div className="text-[12px] font-semibold text-slate-100 line-clamp-1">{s.title}</div>
-                    <div className="mt-0.5 text-[10px] text-slate-400">Updated {s.updatedAt ? formatTime(s.updatedAt) : "—"}</div>
+                    <div className="mt-0.5 text-[10px] text-slate-400">
+                      Updated {s.updatedAt ? formatTime(s.updatedAt) : "—"}
+                    </div>
                   </button>
                 ))}
               </div>
@@ -1073,7 +1036,6 @@ function ChatRow({ message }: { message: Message }) {
                     </ol>
                   );
                 }
-                // paragraphs
                 return (
                   <p key={idx} className="whitespace-pre-wrap">
                     <InlineMarkdown text={b.text} />
@@ -1086,26 +1048,4 @@ function ChatRow({ message }: { message: Message }) {
       </div>
     </div>
   );
-}
-
-/** ---------------- localStorage helpers ---------------- */
-function readStorage(): { sessions: Session[]; activeId: string } | null {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { sessions?: Session[]; activeId?: string };
-    if (!parsed.sessions?.length || !parsed.activeId) return null;
-    // basic shape validation
-    return { sessions: parsed.sessions, activeId: parsed.activeId };
-  } catch {
-    return null;
-  }
-}
-
-function writeStorage(data: { sessions: Session[]; activeId: string }) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch {
-    // ignore quota/privacy failures
-  }
 }

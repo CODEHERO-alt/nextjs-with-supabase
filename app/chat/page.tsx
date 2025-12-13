@@ -34,7 +34,7 @@ type CoachDraft = {
   blocks: Array<
     | { kind: "p"; text: string }
     | { kind: "h"; text: string }
-    | { kind: "ul"; items: string[] }
+    | { kind: "ul"; items: readonly string[] }
     | { kind: "quote"; text: string }
     | { kind: "callout"; label: string; text: string }
   >;
@@ -993,7 +993,7 @@ function NotionMessage({ message }: { message: Message }) {
       | { kind: "p"; text: string }
       | { kind: "quote"; text: string }
       | { kind: "callout"; label: string; text: string }
-      | { kind: "ul"; items: string[] }
+      | { kind: "ul"; items: readonly string[] }
     > = [];
 
     let ul: string[] = [];

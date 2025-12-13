@@ -30,6 +30,13 @@ const BRAND = {
   subtitle: "Mental game coach for athletes",
 };
 
+/**
+ * Reduced quick actions: 3 (more room for sessions list)
+ * Keep the most-used / highest-value:
+ * - Reset (after mistake)
+ * - Clutch (late-game)
+ * - Post-game review
+ */
 const QUICK_ACTIONS: Array<{
   k: string;
   title: string;
@@ -54,14 +61,6 @@ const QUICK_ACTIONS: Array<{
     fundamental: "Poise",
   },
   {
-    k: "pregame",
-    title: "Pre-game focus script",
-    prompt:
-      "Write a short pre-game script I can read before warm-up. I want to feel ___. My biggest distraction is ___.",
-    tag: "Pre-game",
-    fundamental: "Patience",
-  },
-  {
     k: "review",
     title: "5-min post-game review",
     prompt:
@@ -69,23 +68,12 @@ const QUICK_ACTIONS: Array<{
     tag: "Review",
     fundamental: "Perspective",
   },
-  {
-    k: "plan",
-    title: "14-day confidence plan",
-    prompt:
-      "Create a simple 14-day plan to rebuild confidence and consistency. My level is ___. I can commit __ minutes/day.",
-    tag: "Plan",
-    fundamental: "Perseverance",
-  },
 ];
 
 /** ---------------- Storage ---------------- */
 const STORAGE_KEY = "bgpt_chat_v1";
 
-/** ---------------- Build-safe deterministic ID helpers ----------------
- * Avoid Date.now / crypto.randomUUID / Math.random during render to satisfy
- * Next.js prerender constraints for Client Components.
- */
+/** ---------------- Build-safe deterministic ID helpers ---------------- */
 let __uidCounter = 0;
 /** Render-safe deterministic ID (no random/Date/crypto) */
 function uid(prefix = "x") {
@@ -94,7 +82,6 @@ function uid(prefix = "x") {
 }
 /** Runtime ID (event handlers / effects only) */
 function rid(prefix = "m") {
-  // IMPORTANT: call only in effects or user events (not during render)
   const c = (globalThis as any)?.crypto as Crypto | undefined;
   if (c?.randomUUID) return `${prefix}_${c.randomUUID()}`;
 
@@ -129,6 +116,93 @@ function detectTone(text: string): Tone {
   if (win && !loss) return "celebrate";
   if (loss) return "reframe";
   return "steady";
+}
+
+/** ---------------- Interactive background ----------------
+ * - Pointer-follow radial lights via CSS variables (--mx/--my)
+ * - Gentle ambient drift so mobile still feels alive
+ * - Respects prefers-reduced-motion
+ * - Fixed layer ensures background never “cuts off” at page bottom
+ */
+function useInteractiveBackground() {
+  useEffect(() => {
+    const root = document.documentElement;
+
+    const prefersReduced =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // Set defaults so it looks good before first mouse move
+    root.style.setProperty("--mx", "50%");
+    root.style.setProperty("--my", "18%");
+
+    // Ambient drift (works even without mouse). Keep subtle.
+    let raf = 0;
+    let t0 = performance.now();
+    const drift = () => {
+      const t = (performance.now() - t0) / 1000;
+      // gentle slow movement in a small range
+      const x = 50 + Math.sin(t * 0.18) * 6;
+      const y = 18 + Math.cos(t * 0.14) * 5;
+      // Only apply drift if user hasn't moved mouse recently
+      if (prefersReduced) return;
+      root.style.setProperty("--dx", `${x}%`);
+      root.style.setProperty("--dy", `${y}%`);
+      raf = requestAnimationFrame(drift);
+    };
+
+    // Pointer follow (smoothed)
+    let targetX = 0.5;
+    let targetY = 0.18;
+    let currentX = 0.5;
+    let currentY = 0.18;
+    let lastPointerAt = 0;
+
+    const onMove = (e: PointerEvent) => {
+      const w = Math.max(1, window.innerWidth);
+      const h = Math.max(1, window.innerHeight);
+      targetX = Math.min(0.98, Math.max(0.02, e.clientX / w));
+      targetY = Math.min(0.98, Math.max(0.02, e.clientY / h));
+      lastPointerAt = performance.now();
+    };
+
+    const animate = () => {
+      // Ease towards target
+      const ease = 0.10;
+      currentX = currentX + (targetX - currentX) * ease;
+      currentY = currentY + (targetY - currentY) * ease;
+
+      // If no pointer activity recently, blend toward drift position (dx/dy)
+      const idle = performance.now() - lastPointerAt > 2500;
+      if (idle && !prefersReduced) {
+        const dx = parseFloat(getComputedStyle(root).getPropertyValue("--dx")) || 50;
+        const dy = parseFloat(getComputedStyle(root).getPropertyValue("--dy")) || 18;
+        const driftX = dx / 100;
+        const driftY = dy / 100;
+        currentX = currentX + (driftX - currentX) * 0.02;
+        currentY = currentY + (driftY - currentY) * 0.02;
+      }
+
+      root.style.setProperty("--mx", `${Math.round(currentX * 1000) / 10}%`);
+      root.style.setProperty("--my", `${Math.round(currentY * 1000) / 10}%`);
+
+      raf = requestAnimationFrame(animate);
+    };
+
+    // Start drift + animation
+    if (!prefersReduced) {
+      raf = requestAnimationFrame(drift);
+    }
+    raf = requestAnimationFrame(animate);
+
+    window.addEventListener("pointermove", onMove, { passive: true });
+
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
 }
 
 /** ---------------- Minimal local “coach brain” with tone branching ---------------- */
@@ -450,6 +524,8 @@ function writeStorage(data: { sessions: Session[]; activeId: string }) {
 
 /** ---------------- Page ---------------- */
 export default function ChatPage() {
+  useInteractiveBackground();
+
   const responderMode = useMemo(getResponderMode, []);
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -660,8 +736,6 @@ export default function ChatPage() {
           )
         );
       }
-
-      // Streaming seam is intentionally stubbed in callApiChatStreaming()
     } catch {
       const assistantMsg: Message = {
         id: rid("a"),
@@ -683,11 +757,40 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0f19] text-slate-100">
-      {/* subtle background */}
-      <div className="pointer-events-none fixed inset-0 opacity-70">
-        <div className="absolute -top-24 left-1/2 h-[420px] w-[920px] -translate-x-1/2 rounded-full bg-gradient-to-b from-white/10 via-white/0 to-transparent blur-3xl" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(90,79,246,0.10),transparent_40%),radial-gradient(circle_at_75%_20%,rgba(58,166,255,0.10),transparent_45%),radial-gradient(circle_at_55%_90%,rgba(244,197,66,0.06),transparent_45%)]" />
+    <div className="min-h-screen bg-[#0b0f19] text-slate-100 overflow-hidden">
+      {/* Fixed interactive gradient background — never “cuts off” */}
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        {/* Base wash */}
+        <div className="absolute inset-0 bg-[#0b0f19]" />
+
+        {/* Pointer-follow light */}
+        <div
+          className="absolute inset-0 opacity-80"
+          style={{
+            background:
+              "radial-gradient(900px circle at var(--mx) var(--my), rgba(90,79,246,0.18), transparent 55%)",
+          }}
+        />
+        {/* Secondary soft light (drift blend) */}
+        <div
+          className="absolute inset-0 opacity-70"
+          style={{
+            background:
+              "radial-gradient(820px circle at calc(var(--mx) + 18%) calc(var(--my) + 14%), rgba(58,166,255,0.14), transparent 58%)",
+          }}
+        />
+        {/* Warm accent */}
+        <div
+          className="absolute inset-0 opacity-60"
+          style={{
+            background:
+              "radial-gradient(760px circle at calc(var(--mx) - 18%) calc(var(--my) + 44%), rgba(244,197,66,0.10), transparent 60%)",
+          }}
+        />
+        {/* Texture layer */}
+        <div className="absolute inset-0 opacity-40 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent_30%,rgba(255,255,255,0.03))]" />
+        {/* Subtle grain */}
+        <div className="absolute inset-0 opacity-[0.08] bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.65)_1px,transparent_0)] [background-size:24px_24px]" />
       </div>
 
       <div className="relative mx-auto flex min-h-screen max-w-[1400px]">
@@ -716,7 +819,8 @@ export default function ChatPage() {
             </button>
           </div>
 
-          <div className="px-5">
+          {/* Make the middle area scroll internally so sessions don't “push” layout */}
+          <div className="flex min-h-0 flex-1 flex-col px-5">
             <button
               onClick={newSession}
               className="w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-left text-[12px] font-semibold hover:bg-white/15"
@@ -724,51 +828,53 @@ export default function ChatPage() {
               + New session
             </button>
 
-            <div className="mt-4">
-              <div className="mb-2 text-[11px] font-semibold text-slate-300">Sessions</div>
-              <div className="space-y-2">
-                {sessions.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => setActiveId(s.id)}
-                    className={[
-                      "w-full rounded-xl border border-white/10 px-3 py-2 text-left hover:bg-white/5",
-                      s.id === activeId ? "bg-white/10" : "bg-black/15",
-                    ].join(" ")}
-                  >
-                    <div className="text-[12px] font-semibold text-slate-100 line-clamp-1">{s.title}</div>
-                    <div className="mt-0.5 text-[10px] text-slate-400">
-                      Updated {s.updatedAt ? formatTime(s.updatedAt) : "—"}
-                    </div>
-                  </button>
-                ))}
+            <div className="mt-4 min-h-0 flex-1 overflow-auto pr-1">
+              <div>
+                <div className="mb-2 text-[11px] font-semibold text-slate-300">Sessions</div>
+                <div className="space-y-2">
+                  {sessions.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => setActiveId(s.id)}
+                      className={[
+                        "w-full rounded-xl border border-white/10 px-3 py-2 text-left hover:bg-white/5",
+                        s.id === activeId ? "bg-white/10" : "bg-black/15",
+                      ].join(" ")}
+                    >
+                      <div className="text-[12px] font-semibold text-slate-100 line-clamp-1">{s.title}</div>
+                      <div className="mt-0.5 text-[10px] text-slate-400">
+                        Updated {s.updatedAt ? formatTime(s.updatedAt) : "—"}
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div className="mt-6">
-              <div className="mb-2 text-[11px] font-semibold text-slate-300">Quick actions</div>
-              <div className="space-y-2">
-                {QUICK_ACTIONS.map((a) => (
-                  <button
-                    key={a.k}
-                    onClick={() => applyQuick(a.prompt)}
-                    className="w-full rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-left hover:bg-white/5"
-                    title={a.prompt}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="text-[12px] font-semibold text-slate-100">{a.title}</div>
-                      <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-                        {a.fundamental}
-                      </span>
-                    </div>
-                    <div className="mt-1 line-clamp-1 text-[10px] text-slate-400">{a.tag}</div>
-                  </button>
-                ))}
+              <div className="mt-6">
+                <div className="mb-2 text-[11px] font-semibold text-slate-300">Quick actions</div>
+                <div className="space-y-2">
+                  {QUICK_ACTIONS.map((a) => (
+                    <button
+                      key={a.k}
+                      onClick={() => applyQuick(a.prompt)}
+                      className="w-full rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-left hover:bg-white/5"
+                      title={a.prompt}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="text-[12px] font-semibold text-slate-100">{a.title}</div>
+                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
+                          {a.fundamental}
+                        </span>
+                      </div>
+                      <div className="mt-1 line-clamp-1 text-[10px] text-slate-400">{a.tag}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="mt-auto px-5 pb-5 pt-4">
+          <div className="px-5 pb-5 pt-4">
             <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
               <div className="text-[11px] font-semibold text-slate-300">Safety</div>
               <div className="mt-2 text-[11px] leading-5 text-slate-400">
@@ -779,7 +885,7 @@ export default function ChatPage() {
         </aside>
 
         {/* Main */}
-        <main className="relative z-10 flex min-h-screen flex-1 flex-col">
+        <main className="relative z-10 flex min-h-screen flex-1 flex-col min-w-0">
           {/* Top bar */}
           <div className="sticky top-0 z-20 border-b border-white/10 bg-black/10 backdrop-blur-xl">
             <div className="mx-auto flex max-w-[1100px] items-center justify-between px-4 py-3 md:px-6">
@@ -818,9 +924,10 @@ export default function ChatPage() {
             </div>
           </div>
 
-          <div className="mx-auto flex w-full max-w-[1100px] flex-1 gap-6 px-4 py-6 md:px-6">
+          {/* Make this area own the scroll; prevents “bottom fade/flat” issues */}
+          <div className="mx-auto flex w-full max-w-[1100px] flex-1 gap-6 px-4 py-6 md:px-6 min-h-0 overflow-hidden">
             {/* Chat column */}
-            <section className="flex min-w-0 flex-1 flex-col">
+            <section className="flex min-w-0 flex-1 flex-col min-h-0">
               {/* Fundamentals strip */}
               <div className="mb-4 flex flex-wrap gap-2">
                 {(["Presence", "Poise", "Patience", "Perspective", "Perseverance"] as Fundamental[]).map((f) => (
@@ -897,7 +1004,7 @@ export default function ChatPage() {
                 </div>
 
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {QUICK_ACTIONS.slice(0, 3).map((a) => (
+                  {QUICK_ACTIONS.map((a) => (
                     <button
                       key={a.k}
                       onClick={() => applyQuick(a.prompt)}
@@ -969,7 +1076,7 @@ function ChatRow({ message }: { message: Message }) {
   }, [isUser, message.content]);
 
   return (
-    <div className={["flex gap-3", "justify-start"].join(" ")}>
+    <div className="flex gap-3 justify-start">
       <Avatar label={isUser ? "You" : "BG"} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-3">

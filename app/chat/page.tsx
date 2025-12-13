@@ -77,6 +77,8 @@ const STARTER_TEMPLATES: Array<{ title: string; body: string }> = [
   },
 ];
 
+let __uidCounter = 0;
+
 const DOCK_ACTIONS: Array<{ k: string; label: string; description: string }> = [
   { k: "reset", label: "Reset routine", description: "Stabilize your body and attention fast." },
   { k: "pregame", label: "Pre-game cue", description: "Lock into calm execution." },
@@ -85,7 +87,13 @@ const DOCK_ACTIONS: Array<{ k: string; label: string; description: string }> = [
 ];
 
 function uid(prefix = "m") {
-  return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
+  // Safe for Next.js prerender/build: no Math.random during render
+  // Uses crypto.randomUUID in the browser, fallback avoids randomness.
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `${prefix}_${crypto.randomUUID()}`;
+  }
+   __uidCounter = (__uidCounter + 1) % Number.MAX_SAFE_INTEGER;
+  return `${prefix}_${Date.now().toString(16)}_${__uidCounter.toString(16)}`;
 }
 
 function formatTime(ts: number) {

@@ -24,7 +24,7 @@ export default function LoginPage() {
     setLoading(false);
     if (error) return setMsg(error.message);
 
-    window.location.href = "/app";
+    window.location.href = "/start";
   }
 
   async function signInWithGoogle() {

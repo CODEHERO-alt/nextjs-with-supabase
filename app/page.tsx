@@ -19,9 +19,11 @@ import React, {
  *   meaningful motion (count-up + staged reveal), accessibility/performance reductions (less blur).
  */
 
-const OPEN_APP_URL = "https://YOUR_DOMAIN.com/app"; // <-- replace (your independent BGPT app)
-const WATCH_DEMO_URL = "https://YOUR_DOMAIN.com/demo.mp4"; // <-- replace (or a short loom/mp4)
-const PRICING_URL = "https://YOUR_DOMAIN.com/pricing"; // optional
+const OPEN_APP_URL = "/app"; // protected area; redirects to /login if not logged in
+const LOGIN_URL = "/login";
+const SIGNUP_URL = "/signup";
+const WATCH_DEMO_URL = "https://YOUR_DOMAIN.com/demo.mp4"; // keep or replace later
+const PRICING_URL = "#pricing"; // placeholder so it doesn't go nowhere
 
 type ChatRole = "user" | "coach";
 

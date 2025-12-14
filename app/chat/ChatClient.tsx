@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
 type Role = "user" | "assistant" | "system";
-type Fundamental = "Presence" | "Patience" | "Perspective" | "Poise" | "Perseverance";
 type Tone = "celebrate" | "reframe" | "steady";
 
 type Message = {
@@ -12,7 +11,6 @@ type Message = {
   content: string;
   createdAt: number; // epoch ms
   meta?: {
-    fundamental?: Fundamental;
     label?: string; // small tag like "Reset" / "Clutch"
     tone?: Tone;
   };
@@ -42,7 +40,6 @@ const QUICK_ACTIONS: Array<{
   title: string;
   prompt: string;
   tag: string;
-  fundamental: Fundamental;
 }> = [
   {
     k: "reset",
@@ -50,7 +47,6 @@ const QUICK_ACTIONS: Array<{
     prompt:
       "Build me a 90-second reset routine I can run after a mistake. My sport is ___. The moment I struggle most is ___.",
     tag: "Reset",
-    fundamental: "Presence",
   },
   {
     k: "clutch",
@@ -58,7 +54,6 @@ const QUICK_ACTIONS: Array<{
     prompt:
       "Late in games I rush decisions. Give me one cue + one breath pattern + one next-action focus for the next play.",
     tag: "Clutch",
-    fundamental: "Poise",
   },
   {
     k: "review",
@@ -66,7 +61,6 @@ const QUICK_ACTIONS: Array<{
     prompt:
       "Guide me through a 5-minute post-game review. Today I did ___. I struggled with ___. One thing I’ll practice is ___.",
     tag: "Review",
-    fundamental: "Perspective",
   },
 ];
 
@@ -95,16 +89,6 @@ function formatTime(ts: number) {
   const hh = d.getHours().toString().padStart(2, "0");
   const mm = d.getMinutes().toString().padStart(2, "0");
   return `${hh}:${mm}`;
-}
-
-function pickFundamental(text: string): Fundamental {
-  const t = text.toLowerCase();
-  if (/(anxious|nervous|racing|overthink|mind|future|panic)/.test(t)) return "Presence";
-  if (/(rush|hurry|force|now|impatient|quick|fast)/.test(t)) return "Patience";
-  if (/(bigger|season|long-term|story|perspective|career)/.test(t)) return "Perspective";
-  if (/(pressure|clutch|late|tight|choke|4th|final|min|close game)/.test(t)) return "Poise";
-  if (/(slump|stuck|again|quit|hard|confidence|down|spiral)/.test(t)) return "Perseverance";
-  return "Poise";
 }
 
 function detectTone(text: string): Tone {
@@ -142,10 +126,8 @@ function useInteractiveBackground() {
     let t0 = performance.now();
     const drift = () => {
       const t = (performance.now() - t0) / 1000;
-      // gentle slow movement in a small range
       const x = 50 + Math.sin(t * 0.18) * 6;
       const y = 18 + Math.cos(t * 0.14) * 5;
-      // Only apply drift if user hasn't moved mouse recently
       if (prefersReduced) return;
       root.style.setProperty("--dx", `${x}%`);
       root.style.setProperty("--dy", `${y}%`);
@@ -168,12 +150,10 @@ function useInteractiveBackground() {
     };
 
     const animate = () => {
-      // Ease towards target
       const ease = 0.10;
       currentX = currentX + (targetX - currentX) * ease;
       currentY = currentY + (targetY - currentY) * ease;
 
-      // If no pointer activity recently, blend toward drift position (dx/dy)
       const idle = performance.now() - lastPointerAt > 2500;
       if (idle && !prefersReduced) {
         const dx = parseFloat(getComputedStyle(root).getPropertyValue("--dx")) || 50;
@@ -190,7 +170,6 @@ function useInteractiveBackground() {
       raf = requestAnimationFrame(animate);
     };
 
-    // Start drift + animation
     if (!prefersReduced) {
       raf = requestAnimationFrame(drift);
     }
@@ -203,131 +182,6 @@ function useInteractiveBackground() {
       cancelAnimationFrame(raf);
     };
   }, []);
-}
-
-/** ---------------- Minimal local “coach brain” with tone branching ---------------- */
-function coachReply(userText: string): { content: string; fundamental: Fundamental; label: string; tone: Tone } {
-  const f = pickFundamental(userText);
-  const tone = detectTone(userText);
-
-  const header: Record<Fundamental, string> = {
-    Presence: "Presence: bring attention back to what’s real, right now.",
-    Patience: "Patience: slow the game down and trust the process.",
-    Perspective: "Perspective: widen the lens so one moment doesn’t define you.",
-    Poise: "Poise: calm execution under pressure.",
-    Perseverance: "Perseverance: keep showing up with structure, not emotion.",
-  };
-
-  const labelByF: Record<Fundamental, string> = {
-    Presence: "Reset",
-    Patience: "Tempo",
-    Perspective: "Review",
-    Poise: "Clutch",
-    Perseverance: "Plan",
-  };
-
-  const baseByF: Record<Fundamental, string[]> = {
-    Presence: [
-      "Here’s a simple reset you can run in the moment:",
-      "1) **Exhale long** (6–8s). Shoulders down.",
-      "2) **Name what’s true**: “Next play.”",
-      "3) **One job**: pick the *next controllable action* (footwork / first step / target).",
-      "",
-      "Quick check: what sport + what’s the exact situation where this shows up most?",
-    ],
-    Patience: [
-      "Your skill is there — the leak is rushing the sequence.",
-      "Try this **3-step tempo cue** for the next rep:",
-      "1) **See it** (one clear picture).",
-      "2) **Breathe** (one slow exhale).",
-      "3) **Do it** (commit to the first action only).",
-      "",
-      "Tell me: what’s the *first* action you need to execute (first step / first read / first touch)?",
-    ],
-    Perspective: [
-      "Let’s separate the moment from the meaning.",
-      "Run this quick review (2 minutes):",
-      "- What happened (facts only)?",
-      "- What did you control well?",
-      "- What’s one adjustment you’ll practice this week?",
-      "",
-      "If you share the one moment you want back, I’ll turn it into a repeatable cue.",
-    ],
-    Poise: [
-      "Late-game pressure is a **Poise** problem: calm body → clear decision → clean action.",
-      "Use this **Clutch Protocol (15 seconds)**:",
-      "1) **Exhale** (slow).",
-      "2) **Cue**: “Smooth + simple.”",
-      "3) **Narrow focus**: only the next read or next step.",
-      "",
-      "What usually breaks first for you — breathing, legs, or decision speed?",
-    ],
-    Perseverance: [
-      "Confidence comes back fastest with a small, repeatable plan.",
-      "For the next 7 days:",
-      "- 10 minutes fundamentals (same drill daily)",
-      "- 3 reps under pressure (timer / consequence)",
-      "- 60-second reflection: what worked, what to repeat",
-      "",
-      "What’s your current level + how many minutes/day can you realistically commit?",
-    ],
-  };
-
-  const celebrateOverlay: string[] = [
-    "Good. Don’t rush past that.",
-    "A real win isn’t just the scoreboard — it’s the moment you stayed composed when it mattered.",
-    "",
-    "## Lock it in (so it’s repeatable)",
-    "- What was the exact moment (time + situation)?",
-    "- What did your body feel like (breath / jaw / shoulders)?",
-    "- What was your one cue or thought?",
-    "",
-    "Tell me your sport and the moment — I’ll turn it into a 15-second routine you can reuse.",
-  ];
-
-  const reframeOverlay: string[] = [
-    "I hear the frustration. That sting is normal when effort is high.",
-    "We’re going to extract one lesson without turning it into a story about you as a person.",
-    "",
-    "## Quick reframe (2 minutes)",
-    "- One moment you want back (specific).",
-    "- One thing you did well that you’ll keep.",
-    "- One adjustment you’ll practice this week.",
-    "",
-    "Share the moment you want back and I’ll build a reset so that pattern doesn’t repeat.",
-  ];
-
-  const lines: string[] = [];
-  lines.push(`**${header[f]}**`, "");
-
-  if (tone === "celebrate") {
-    lines.push(...celebrateOverlay, "", "## Keep it simple for next time", ...shallowTool(baseByF[f]));
-  } else if (tone === "reframe") {
-    lines.push(...reframeOverlay, "", "## One clean step forward", ...shallowTool(baseByF[f]));
-  } else {
-    lines.push(...baseByF[f]);
-  }
-
-  return { content: lines.join("\n"), fundamental: f, label: labelByF[f], tone };
-}
-
-function shallowTool(lines: string[]): string[] {
-  const compact: string[] = [];
-  let nonEmpty = 0;
-
-  for (const l of lines) {
-    if (l.trim()) nonEmpty++;
-    if (nonEmpty <= 7) compact.push(l);
-  }
-
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const l = lines[i].trim();
-    if (l.endsWith("?")) {
-      if (!compact.includes(lines[i])) compact.push("", lines[i]);
-      break;
-    }
-  }
-  return compact;
 }
 
 /** ---------------- Seed data (deterministic: NO Date/crypto) ---------------- */
@@ -346,32 +200,15 @@ function seedSessionStatic(): Session {
       {
         id: uid("a"),
         role: "assistant",
-        content: "Tell me what you’re training today — pressure, confidence, focus, or bounce-back.",
+        content: "What’s the situation you want to handle better — and when does it show up?",
         createdAt: 0,
-        meta: { fundamental: "Poise", label: "Start", tone: "steady" },
-      },
-      {
-        id: uid("u"),
-        role: "user",
-        content: "Late in games I start thinking ahead, my legs feel heavy, and I rush decisions.",
-        createdAt: 0,
+        meta: { label: "Start", tone: "steady" },
       },
     ],
   };
 }
 
-/** ---------------- API seam (non-streaming now; streaming stub) ---------------- */
-type ChatResponderMode = "local" | "api";
-
-/**
- * Set NEXT_PUBLIC_CHAT_RESPONDER="api" to use /api/chat.
- * Defaults to local demo responder.
- */
-function getResponderMode(): ChatResponderMode {
-  const v = (process.env.NEXT_PUBLIC_CHAT_RESPONDER || "").toLowerCase();
-  return v === "api" ? "api" : "local";
-}
-
+/** ---------------- API seam (LIVE ONLY) ---------------- */
 async function callApiChatNonStreaming(payload: {
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
 }) {
@@ -390,13 +227,6 @@ async function callApiChatNonStreaming(payload: {
   const reply = data.reply ?? data.content;
   if (!reply) throw new Error("No reply returned from /api/chat");
   return reply;
-}
-
-async function callApiChatStreaming(_payload: {
-  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
-  onToken: (token: string) => void;
-}) {
-  throw new Error("Streaming not implemented yet.");
 }
 
 async function safeReadText(res: Response) {
@@ -526,8 +356,6 @@ function writeStorage(data: { sessions: Session[]; activeId: string }) {
 export default function ChatPage() {
   useInteractiveBackground();
 
-  const responderMode = useMemo(getResponderMode, []);
-
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Render-safe initial state (static seed)
@@ -539,6 +367,14 @@ export default function ChatPage() {
 
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const composingRef = useRef(false);
+
+  // Track whether the user is actively scrolling; pause auto-scroll if so
+  const userScrollRef = useRef<{ active: boolean; t?: number }>({ active: false });
+
+  // Keep refs to each message container so we can scroll to the assistant reply start
+  const msgRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const [sessionMenuOpenId, setSessionMenuOpenId] = useState<string | null>(null);
 
   // Hydrate from localStorage (client-only), otherwise convert seed to runtime ids/timestamps.
   useEffect(() => {
@@ -580,21 +416,53 @@ export default function ChatPage() {
     return () => window.clearTimeout(t);
   }, [sessions, activeId]);
 
+  // Close session menu on outside click / escape
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSessionMenuOpenId(null);
+    };
+    const onClick = () => setSessionMenuOpenId(null);
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("click", onClick);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("click", onClick);
+    };
+  }, []);
+
   const active = useMemo(() => sessions.find((s) => s.id === activeId) ?? sessions[0], [sessions, activeId]);
 
-  const lastUser = useMemo(() => {
-    const ms = active?.messages ?? [];
-    for (let i = ms.length - 1; i >= 0; i--) if (ms[i].role === "user") return ms[i].content;
-    return "";
-  }, [active]);
+  function markUserScrolling() {
+    userScrollRef.current.active = true;
+    if (userScrollRef.current.t) window.clearTimeout(userScrollRef.current.t);
+    userScrollRef.current.t = window.setTimeout(() => {
+      userScrollRef.current.active = false;
+    }, 1200);
+  }
 
-  const focusFundamental = useMemo(() => (lastUser ? pickFundamental(lastUser) : "Poise"), [lastUser]);
+  function scrollToAssistantStart(messageId: string) {
+    const scroller = scrollerRef.current;
+    const el = msgRefs.current[messageId];
+    if (!scroller || !el) return;
 
-  useEffect(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [active?.messages?.length, isTyping]);
+    // If user is actively scrolling, don't interfere
+    if (userScrollRef.current.active) return;
+
+    // Only scroll if the message start is below/above the visible viewport significantly
+    const box = scroller.getBoundingClientRect();
+    const mbox = el.getBoundingClientRect();
+
+    const padding = 12;
+    const visibleTop = box.top + padding;
+    const visibleBottom = box.bottom - padding;
+
+    const tooLow = mbox.top > visibleBottom - 24;
+    const tooHigh = mbox.top < visibleTop + 24;
+
+    if (tooLow || tooHigh) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
 
   function newSession() {
     const now = Date.now();
@@ -614,7 +482,7 @@ export default function ChatPage() {
           role: "assistant",
           content: "What’s the situation you want to handle better — and when does it show up?",
           createdAt: now,
-          meta: { fundamental: "Presence", label: "Start", tone: "steady" },
+          meta: { label: "Start", tone: "steady" },
         },
       ],
     };
@@ -647,7 +515,7 @@ export default function ChatPage() {
                   role: "assistant",
                   content: "What’s the situation you want to handle better — and when does it show up?",
                   createdAt: now,
-                  meta: { fundamental: "Poise", label: "Start", tone: "steady" },
+                  meta: { label: "Start", tone: "steady" },
                 },
               ],
             }
@@ -656,6 +524,42 @@ export default function ChatPage() {
     );
     setIsTyping(false);
     setInput("");
+  }
+
+  function deleteSession(sessionId: string) {
+    setSessions((prev) => {
+      const next = prev.filter((s) => s.id !== sessionId);
+      if (!next.length) {
+        // always keep at least one session
+        const s = {
+          id: rid("sess"),
+          title: "New session",
+          updatedAt: Date.now(),
+          messages: [
+            {
+              id: rid("sys"),
+              role: "system" as const,
+              content: "Private coaching session. Keep answers practical and athlete-friendly.",
+              createdAt: Date.now(),
+            },
+            {
+              id: rid("a"),
+              role: "assistant" as const,
+              content: "What’s the situation you want to handle better — and when does it show up?",
+              createdAt: Date.now(),
+              meta: { label: "Start", tone: "steady" as const },
+            },
+          ],
+        };
+        setActiveId(s.id);
+        return [s];
+      }
+
+      // if deleting active, switch to newest remaining
+      if (activeId === sessionId) setActiveId(next[0].id);
+      return next;
+    });
+    setSessionMenuOpenId(null);
   }
 
   function buildApiPayloadMessages(session: Session) {
@@ -695,55 +599,22 @@ export default function ChatPage() {
     setIsTyping(true);
 
     try {
-      if (responderMode === "api") {
-        const payload = {
-          messages: buildApiPayloadMessages({ ...active, messages: [...active.messages, userMsg] }),
-        };
-        const replyText = await callApiChatNonStreaming(payload);
+      const payload = {
+        messages: buildApiPayloadMessages({ ...active, messages: [...active.messages, userMsg] }),
+      };
 
-        const assistantMsg: Message = {
-          id: rid("a"),
-          role: "assistant",
-          content: replyText,
-          createdAt: Date.now(),
-          meta: {
-            fundamental: pickFundamental(replyText),
-            label: "Coach",
-            tone: detectTone(text),
-          },
-        };
+      const replyText = await callApiChatNonStreaming(payload);
 
-        setSessions((prev) =>
-          prev.map((s) =>
-            s.id === active.id ? { ...s, updatedAt: Date.now(), messages: [...s.messages, assistantMsg] } : s
-          )
-        );
-      } else {
-        await new Promise((r) => setTimeout(r, Math.min(1400, 650 + text.length * 8)));
-
-        const reply = coachReply(text);
-        const assistantMsg: Message = {
-          id: rid("a"),
-          role: "assistant",
-          content: reply.content,
-          createdAt: Date.now(),
-          meta: { fundamental: reply.fundamental, label: reply.label, tone: reply.tone },
-        };
-
-        setSessions((prev) =>
-          prev.map((s) =>
-            s.id === active.id ? { ...s, updatedAt: Date.now(), messages: [...s.messages, assistantMsg] } : s
-          )
-        );
-      }
-    } catch {
+      const assistantId = rid("a");
       const assistantMsg: Message = {
-        id: rid("a"),
+        id: assistantId,
         role: "assistant",
+        content: replyText,
         createdAt: Date.now(),
-        content:
-          "I couldn’t reach the server just now. Try again in a moment — and if it keeps happening, we’ll check the API route and environment variables.",
-        meta: { fundamental: "Poise", label: "Error", tone: "steady" },
+        meta: {
+          label: "Coach",
+          tone: detectTone(text),
+        },
       };
 
       setSessions((prev) =>
@@ -751,6 +622,31 @@ export default function ChatPage() {
           s.id === active.id ? { ...s, updatedAt: Date.now(), messages: [...s.messages, assistantMsg] } : s
         )
       );
+
+      // after render, scroll to assistant reply start (lightweight + smooth)
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => scrollToAssistantStart(assistantId));
+      });
+    } catch {
+      const assistantId = rid("a");
+      const assistantMsg: Message = {
+        id: assistantId,
+        role: "assistant",
+        createdAt: Date.now(),
+        content:
+          "I couldn’t reach the server just now. Try again in a moment — and if it keeps happening, we’ll check the API route and environment variables.",
+        meta: { label: "Error", tone: "steady" },
+      };
+
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === active.id ? { ...s, updatedAt: Date.now(), messages: [...s.messages, assistantMsg] } : s
+        )
+      );
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => scrollToAssistantStart(assistantId));
+      });
     } finally {
       setIsTyping(false);
     }
@@ -760,10 +656,7 @@ export default function ChatPage() {
     <div className="min-h-screen bg-[#0b0f19] text-slate-100 overflow-hidden">
       {/* Fixed interactive gradient background — never “cuts off” */}
       <div className="pointer-events-none fixed inset-0 -z-10">
-        {/* Base wash */}
         <div className="absolute inset-0 bg-[#0b0f19]" />
-
-        {/* Pointer-follow light */}
         <div
           className="absolute inset-0 opacity-80"
           style={{
@@ -771,7 +664,6 @@ export default function ChatPage() {
               "radial-gradient(900px circle at var(--mx) var(--my), rgba(90,79,246,0.18), transparent 55%)",
           }}
         />
-        {/* Secondary soft light (drift blend) */}
         <div
           className="absolute inset-0 opacity-70"
           style={{
@@ -779,7 +671,6 @@ export default function ChatPage() {
               "radial-gradient(820px circle at calc(var(--mx) + 18%) calc(var(--my) + 14%), rgba(58,166,255,0.14), transparent 58%)",
           }}
         />
-        {/* Warm accent */}
         <div
           className="absolute inset-0 opacity-60"
           style={{
@@ -787,13 +678,11 @@ export default function ChatPage() {
               "radial-gradient(760px circle at calc(var(--mx) - 18%) calc(var(--my) + 44%), rgba(244,197,66,0.10), transparent 60%)",
           }}
         />
-        {/* Texture layer */}
         <div className="absolute inset-0 opacity-40 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent_30%,rgba(255,255,255,0.03))]" />
-        {/* Subtle grain */}
         <div className="absolute inset-0 opacity-[0.08] bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.65)_1px,transparent_0)] [background-size:24px_24px]" />
       </div>
 
-      <div className="relative mx-auto flex min-h-screen max-w-[1400px]">
+      <div className="relative mx-auto flex min-h-screen max-w-[1500px]">
         {/* Sidebar */}
         <aside
           className={[
@@ -819,7 +708,6 @@ export default function ChatPage() {
             </button>
           </div>
 
-          {/* Make the middle area scroll internally so sessions don't “push” layout */}
           <div className="flex min-h-0 flex-1 flex-col px-5">
             <button
               onClick={newSession}
@@ -833,19 +721,47 @@ export default function ChatPage() {
                 <div className="mb-2 text-[11px] font-semibold text-slate-300">Sessions</div>
                 <div className="space-y-2">
                   {sessions.map((s) => (
-                    <button
+                    <div
                       key={s.id}
-                      onClick={() => setActiveId(s.id)}
                       className={[
-                        "w-full rounded-xl border border-white/10 px-3 py-2 text-left hover:bg-white/5",
+                        "relative w-full rounded-xl border border-white/10 px-3 py-2 hover:bg-white/5",
                         s.id === activeId ? "bg-white/10" : "bg-black/15",
                       ].join(" ")}
                     >
-                      <div className="text-[12px] font-semibold text-slate-100 line-clamp-1">{s.title}</div>
-                      <div className="mt-0.5 text-[10px] text-slate-400">
-                        Updated {s.updatedAt ? formatTime(s.updatedAt) : "—"}
-                      </div>
-                    </button>
+                      <button onClick={() => setActiveId(s.id)} className="block w-full text-left pr-8">
+                        <div className="text-[12px] font-semibold text-slate-100 line-clamp-1">{s.title}</div>
+                        <div className="mt-0.5 text-[10px] text-slate-400">
+                          Updated {s.updatedAt ? formatTime(s.updatedAt) : "—"}
+                        </div>
+                      </button>
+
+                      {/* three-dots menu */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSessionMenuOpenId((prev) => (prev === s.id ? null : s.id));
+                        }}
+                        className="absolute right-2 top-2 rounded-lg px-2 py-1 text-[12px] text-slate-300 hover:bg-white/5 hover:text-slate-100"
+                        aria-label="Session menu"
+                        title="Session options"
+                      >
+                        ⋯
+                      </button>
+
+                      {sessionMenuOpenId === s.id && (
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          className="absolute right-2 top-10 z-30 w-[160px] overflow-hidden rounded-xl border border-white/10 bg-[#0b0f19]/95 backdrop-blur-xl shadow-lg"
+                        >
+                          <button
+                            onClick={() => deleteSession(s.id)}
+                            className="w-full px-3 py-2 text-left text-[12px] text-slate-200 hover:bg-white/5"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -863,10 +779,9 @@ export default function ChatPage() {
                       <div className="flex items-center justify-between">
                         <div className="text-[12px] font-semibold text-slate-100">{a.title}</div>
                         <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-                          {a.fundamental}
+                          {a.tag}
                         </span>
                       </div>
-                      <div className="mt-1 line-clamp-1 text-[10px] text-slate-400">{a.tag}</div>
                     </button>
                   ))}
                 </div>
@@ -888,7 +803,7 @@ export default function ChatPage() {
         <main className="relative z-10 flex min-h-screen flex-1 flex-col min-w-0">
           {/* Top bar */}
           <div className="sticky top-0 z-20 border-b border-white/10 bg-black/10 backdrop-blur-xl">
-            <div className="mx-auto flex max-w-[1100px] items-center justify-between px-4 py-3 md:px-6">
+            <div className="mx-auto flex max-w-[1200px] items-center justify-between px-4 py-3 md:px-6">
               <div className="flex items-center gap-3">
                 {!sidebarOpen && (
                   <button
@@ -924,36 +839,30 @@ export default function ChatPage() {
             </div>
           </div>
 
-          {/* Make this area own the scroll; prevents “bottom fade/flat” issues */}
-          <div className="mx-auto flex w-full max-w-[1100px] flex-1 gap-6 px-4 py-6 md:px-6 min-h-0 overflow-hidden">
+          {/* Two-column: Chat (left) + Panels (right) */}
+          <div className="mx-auto flex w-full max-w-[1200px] flex-1 gap-6 px-4 py-6 md:px-6 min-h-0">
             {/* Chat column */}
             <section className="flex min-w-0 flex-1 flex-col min-h-0">
-              {/* Fundamentals strip */}
-              <div className="mb-4 flex flex-wrap gap-2">
-                {(["Presence", "Poise", "Patience", "Perspective", "Perseverance"] as Fundamental[]).map((f) => (
-                  <span
-                    key={f}
-                    className={[
-                      "rounded-full border border-white/10 px-3 py-1 text-[11px]",
-                      f === focusFundamental ? "bg-white/10 text-slate-100" : "bg-white/5 text-slate-300",
-                    ].join(" ")}
-                    title={f}
-                  >
-                    {f}
-                  </span>
-                ))}
-              </div>
-
               {/* Messages */}
               <div
                 ref={scrollerRef}
+                onScroll={markUserScrolling}
+                onWheel={markUserScrolling}
+                onTouchMove={markUserScrolling}
                 className="min-h-0 flex-1 overflow-auto rounded-2xl border border-white/10 bg-black/10 backdrop-blur-xl"
               >
                 <div className="space-y-4 p-4 md:p-5">
                   {(active?.messages ?? [])
                     .filter((m) => m.role !== "system")
                     .map((m) => (
-                      <ChatRow key={m.id} message={m} />
+                      <div
+                        key={m.id}
+                        ref={(el) => {
+                          msgRefs.current[m.id] = el;
+                        }}
+                      >
+                        <ChatRow message={m} />
+                      </div>
                     ))}
 
                   {isTyping && (
@@ -1017,24 +926,11 @@ export default function ChatPage() {
               </div>
             </section>
 
-            {/* Focus panel */}
-            <aside className="hidden w-[320px] shrink-0 lg:block">
+            {/* Right panel */}
+            <aside className="hidden w-[360px] shrink-0 lg:block">
               <div className="sticky top-[84px] space-y-4">
                 <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-                  <div className="text-[11px] font-semibold text-slate-300">Focus for this session</div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <div className="text-[13px] font-semibold text-slate-100">{focusFundamental}</div>
-                    <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-                      Auto-detected
-                    </span>
-                  </div>
-                  <p className="mt-2 text-[12px] leading-6 text-slate-300">
-                    Keep it simple: calm body → clear next action → repeatable routine.
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-                  <div className="text-[11px] font-semibold text-slate-300">How to use this GPT</div>
+                  <div className="text-[11px] font-semibold text-slate-300">How to use this coach</div>
                   <ul className="mt-2 list-disc space-y-1 pl-5 text-[12px] leading-6 text-slate-300">
                     <li>Describe the exact moment (time + situation).</li>
                     <li>Say what breaks first (breath / legs / decision).</li>
@@ -1043,10 +939,9 @@ export default function ChatPage() {
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-                  <div className="text-[11px] font-semibold text-slate-300">Demo mode</div>
+                  <div className="text-[11px] font-semibold text-slate-300">Safety</div>
                   <p className="mt-2 text-[12px] leading-6 text-slate-300">
-                    Replies are simulated locally for design review. Later, swap the responder with{" "}
-                    <code className="text-slate-200">/api/chat</code>.
+                    Coaching only — not medical care. If you’re in crisis, seek immediate local professional help.
                   </p>
                 </div>
               </div>
@@ -1082,11 +977,6 @@ function ChatRow({ message }: { message: Message }) {
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <div className="text-[11px] font-semibold text-slate-100">{isUser ? "You" : BRAND.name}</div>
-            {!isUser && message.meta?.fundamental && (
-              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-                {message.meta.fundamental}
-              </span>
-            )}
             {!isUser && message.meta?.label && (
               <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-400">
                 {message.meta.label}
@@ -1098,7 +988,7 @@ function ChatRow({ message }: { message: Message }) {
 
         <div
           className={[
-            "mt-2 max-w-[82ch] rounded-2xl border border-white/10 px-4 py-3 text-[14px] leading-7",
+            "mt-2 max-w-[90ch] rounded-2xl border border-white/10 px-4 py-3 text-[14px] leading-7",
             isUser ? "bg-white/5 text-slate-100" : "bg-black/20 text-slate-200",
           ].join(" ")}
         >

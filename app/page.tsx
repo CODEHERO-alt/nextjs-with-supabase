@@ -19,7 +19,7 @@ import React, {
  *   meaningful motion (count-up + staged reveal), accessibility/performance reductions (less blur).
  */
 
-const OPEN_APP_URL = "/chat"; // protected area; redirects to /login if not logged in
+const OPEN_APP_URL = "/start"; // protected area; redirects to /login if not logged in
 const LOGIN_URL = "/login";
 const SIGNUP_URL = "/signup";
 const WATCH_DEMO_URL = "https://YOUR_DOMAIN.com/demo.mp4"; // keep or replace later

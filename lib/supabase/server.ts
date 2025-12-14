@@ -1,12 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-/**
- * Especially important if using Fluid compute:
- * Don't put this client in a global variable.
- * Always create a new client within each function.
- */
-export async function createClient() {
+export async function createSupabaseServerClient() {
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -30,9 +25,3 @@ export async function createClient() {
     }
   );
 }
-
-/**
- * Compatibility export:
- * Some template files still import createSupabaseServerClient
- */
-export const createSupabaseServerClient = createClient;

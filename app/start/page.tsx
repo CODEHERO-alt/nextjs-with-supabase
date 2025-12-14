@@ -1,21 +1,21 @@
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function StartGate() {
-  const supabase = await createClient();
+  const supabase = await createSupabaseServerClient();
 
-  // 1) Must be logged in
-  const { data: userData } = await supabase.auth.getUser();
-  const user = userData?.user;
+  // 1️⃣ Auth check
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  // 2) Must be paid (example: profiles table)
+  // 2️⃣ Paid check
   const { data: profile } = await supabase
     .from("profiles")
     .select("is_paid")
@@ -23,9 +23,9 @@ export default async function StartGate() {
     .single();
 
   if (!profile?.is_paid) {
-    redirect("/pricing"); // or /paywall
+    redirect("/pricing"); // paywall page
   }
 
-  // 3) All good → go to chatbot
+  // 3️⃣ Access granted
   redirect("/chat");
 }

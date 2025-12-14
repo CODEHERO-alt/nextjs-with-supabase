@@ -115,13 +115,13 @@ export async function POST(req: Request) {
     }
 
     // --- OpenAI (Responses API) ---
-    // We pass "input" as structured messages + instructions.
+    // ✅ For the current OpenAI SDK typings, message content here should be a string.
     const response = await openai.responses.create({
       model: MODEL,
       instructions: SYSTEM_PROMPT,
       input: cleaned.map((m) => ({
         role: m.role,
-        content: [{ type: "text", text: m.content }],
+        content: m.content,
       })),
       // keep it coach-y and concise
       temperature: 0.6,

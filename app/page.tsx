@@ -23,7 +23,7 @@ const OPEN_APP_URL = "/start"; // protected area; redirects to /login if not log
 const LOGIN_URL = "/login";
 const SIGNUP_URL = "/signup";
 const WATCH_DEMO_URL = "https://YOUR_DOMAIN.com/demo.mp4"; // keep or replace later
-const PRICING_URL = "#pricing"; // placeholder so it doesn't go nowhere
+const PRICING_URL = "/pricing"; // placeholder so it doesn't go nowhere
 
 type ChatRole = "user" | "coach";
 

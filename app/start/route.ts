@@ -1,18 +1,18 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
-export async function GET(request: Request) {
-  const supabase = await createSupabaseServerClient();
+export async function GET(req: Request) {
+  const supabase = await createClient();
 
   // 1) Must be logged in
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
 
   if (!user) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  // 2) Must be paid (example: profiles table)
+  // 2) Must be paid
   const { data: profile } = await supabase
     .from("profiles")
     .select("is_paid")
@@ -20,9 +20,9 @@ export async function GET(request: Request) {
     .single();
 
   if (!profile?.is_paid) {
-    return NextResponse.redirect(new URL("/pricing", request.url)); // or /paywall
+    return NextResponse.redirect(new URL("/pricing", req.url));
   }
 
-  // 3) All good → go to chatbot
-  return NextResponse.redirect(new URL("/chat", request.url));
+  // 3) Paid → Chat
+  return NextResponse.redirect(new URL("/chat", req.url));
 }

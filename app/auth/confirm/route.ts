@@ -4,29 +4,41 @@ import { redirect } from "next/navigation";
 import { type NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url);
+  const url = new URL(request.url);
+  const { searchParams } = url;
 
+  const code = searchParams.get("code");
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   const next = searchParams.get("next") ?? "/start";
 
-  if (!token_hash || !type) {
-    redirect(`/auth/error?error=No token hash or type`);
-  }
-
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.verifyOtp({
-    type,
-    token_hash,
-  });
+  // ✅ New-style links: ?code=...
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-  if (error) {
-    redirect(`/auth/error?error=${encodeURIComponent(error.message)}`);
+    if (error) {
+      redirect(`/auth/error?error=${encodeURIComponent(error.message)}`);
+    }
+
+    redirect(`/verified?next=${encodeURIComponent(next)}`);
   }
 
-  // ✅ Send user to a celebratory verification page first
-  // then that page will redirect them to `next`
-  const verifiedUrl = `${origin}/verified?next=${encodeURIComponent(next)}`;
-  redirect(verifiedUrl);
+  // ✅ Old-style links: ?token_hash=...&type=...
+  if (token_hash && type) {
+    const { error } = await supabase.auth.verifyOtp({
+      type,
+      token_hash,
+    });
+
+    if (error) {
+      redirect(`/auth/error?error=${encodeURIComponent(error.message)}`);
+    }
+
+    redirect(`/verified?next=${encodeURIComponent(next)}`);
+  }
+
+  // If neither format is present
+  redirect(`/auth/error?error=${encodeURIComponent("No code, token hash, or type")}`);
 }

@@ -208,14 +208,19 @@ function seedSessionStatic(): Session {
   };
 }
 
-/** ---------------- API seam (LIVE ONLY) ---------------- */
-async function callApiChatNonStreaming(payload: {
+/** ---------------- API seam (LIVE ONLY) ----------------
+ * - Streaming enabled (client reads streamed text chunks)
+ * - Cost + usage protection is enforced server-side in /api/chat (no client changes needed)
+ */
+async function callApiChatStreaming(payload: {
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
+  onToken: (token: string) => void;
 }) {
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    // IMPORTANT: tell your /api/chat to stream
+    body: JSON.stringify({ messages: payload.messages, stream: true }),
   });
 
   if (!res.ok) {
@@ -223,10 +228,20 @@ async function callApiChatNonStreaming(payload: {
     throw new Error(text || `Request failed (${res.status})`);
   }
 
-  const data = (await res.json()) as { reply?: string; content?: string };
-  const reply = data.reply ?? data.content;
-  if (!reply) throw new Error("No reply returned from /api/chat");
-  return reply;
+  if (!res.body) {
+    throw new Error("No response body (stream unavailable).");
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+    const chunk = decoder.decode(value, { stream: true });
+    if (chunk) payload.onToken(chunk);
+  }
 }
 
 async function safeReadText(res: Response) {
@@ -583,13 +598,24 @@ export default function ChatPage() {
     const now = Date.now();
     const userMsg: Message = { id: rid("u"), role: "user", content: text, createdAt: now };
 
+    // Create the assistant placeholder message immediately (for streaming)
+    const assistantId = rid("a");
+    const assistantMsg: Message = {
+      id: assistantId,
+      role: "assistant",
+      content: "",
+      createdAt: Date.now(),
+      meta: { label: "Coach", tone: detectTone(text) },
+    };
+
+    // Commit user message + placeholder
     setSessions((prev) =>
       prev.map((s) =>
         s.id === active.id
           ? {
               ...s,
               updatedAt: now,
-              messages: [...s.messages, userMsg],
+              messages: [...s.messages, userMsg, assistantMsg],
               title: s.title === "New session" ? "Session: Training" : s.title,
             }
           : s
@@ -598,49 +624,59 @@ export default function ChatPage() {
 
     setIsTyping(true);
 
+    // Subtle scroll to the assistant start soon after it appears
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => scrollToAssistantStart(assistantId));
+    });
+
     try {
-      const payload = {
-        messages: buildApiPayloadMessages({ ...active, messages: [...active.messages, userMsg] }),
-      };
+      const payloadMessages = buildApiPayloadMessages({ ...active, messages: [...active.messages, userMsg] });
 
-      const replyText = await callApiChatNonStreaming(payload);
+      let didFirstTokenScroll = false;
 
-      const assistantId = rid("a");
-      const assistantMsg: Message = {
-        id: assistantId,
-        role: "assistant",
-        content: replyText,
-        createdAt: Date.now(),
-        meta: {
-          label: "Coach",
-          tone: detectTone(text),
+      await callApiChatStreaming({
+        messages: payloadMessages,
+        onToken: (token) => {
+          setSessions((prev) =>
+            prev.map((s) =>
+              s.id === active.id
+                ? {
+                    ...s,
+                    updatedAt: Date.now(),
+                    messages: s.messages.map((m) => (m.id === assistantId ? { ...m, content: m.content + token } : m)),
+                  }
+                : s
+            )
+          );
+
+          // Scroll to assistant start once (after first token) for a clean “reply begins here” feel
+          if (!didFirstTokenScroll) {
+            didFirstTokenScroll = true;
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => scrollToAssistantStart(assistantId));
+            });
+          }
         },
-      };
-
-      setSessions((prev) =>
-        prev.map((s) =>
-          s.id === active.id ? { ...s, updatedAt: Date.now(), messages: [...s.messages, assistantMsg] } : s
-        )
-      );
-
-      // after render, scroll to assistant reply start (lightweight + smooth)
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => scrollToAssistantStart(assistantId));
       });
     } catch {
-      const assistantId = rid("a");
-      const assistantMsg: Message = {
-        id: assistantId,
-        role: "assistant",
-        createdAt: Date.now(),
-        content:
-          "I couldn’t reach the server just now. Try again in a moment — and if it keeps happening, we’ll check the API route and environment variables.",
-        meta: { label: "Error", tone: "steady" },
-      };
-
       setSessions((prev) =>
         prev.map((s) =>
-          s.id === active.id ? { ...s, updatedAt: Date.now(), messages: [...s.messages, assistantMsg] } : s
+          s.id === active.id
+            ? {
+                ...s,
+                updatedAt: Date.now(),
+                messages: s.messages.map((m) =>
+                  m.id === assistantId
+                    ? {
+                        ...m,
+                        content:
+                          "I couldn’t reach the server just now. Try again in a moment — and if it keeps happening, we’ll check the API route and environment variables.",
+                        meta: { label: "Error", tone: "steady" },
+                      }
+                    : m
+                ),
+              }
+            : s
         )
       );
 

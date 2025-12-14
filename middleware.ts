@@ -2,13 +2,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+  const url = req.nextUrl;
 
-  // Protect chat route
-  if (pathname.startsWith("/chat")) {
-    // If user manually opens /chat without passing /start
-    // they’ll be sent back to /start
-    return NextResponse.redirect(new URL("/start", req.url));
+  // Any /chat request must go through /start gate
+  if (url.pathname.startsWith("/chat")) {
+    url.pathname = "/start";
+    return NextResponse.redirect(url);
   }
 
   return NextResponse.next();

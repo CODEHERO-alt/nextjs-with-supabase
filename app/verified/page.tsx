@@ -9,35 +9,47 @@ function VerifiedInner() {
   const next = searchParams.get("next") || "/start";
 
   useEffect(() => {
-    let t1: NodeJS.Timeout;
-    let t2: NodeJS.Timeout;
-    let t3: NodeJS.Timeout;
+    let redirectTimer: NodeJS.Timeout;
+    let interval: NodeJS.Timeout;
+
+    let cancelled = false;
 
     (async () => {
       const confetti = (await import("canvas-confetti")).default;
 
-      confetti({
-        particleCount: 160,
-        spread: 70,
-        origin: { y: 0.6 },
-      });
+      const start = Date.now();
+      const duration = 7000; // 🎉 total celebration time (7s)
 
-      t1 = setTimeout(
-        () => confetti({ particleCount: 120, spread: 90, origin: { y: 0.6 } }),
-        300
-      );
-      t2 = setTimeout(
-        () => confetti({ particleCount: 90, spread: 110, origin: { y: 0.6 } }),
-        700
-      );
+      interval = setInterval(() => {
+        if (cancelled) return;
 
-      t3 = setTimeout(() => router.replace(next), 2000);
+        const elapsed = Date.now() - start;
+        if (elapsed > duration) {
+          clearInterval(interval);
+          return;
+        }
+
+        confetti({
+          particleCount: 40,
+          spread: 80,
+          startVelocity: 30,
+          gravity: 0.9,
+          origin: {
+            x: Math.random(),
+            y: Math.random() * 0.6,
+          },
+        });
+      }, 450); // smooth waves, not overwhelming
     })();
 
+    redirectTimer = setTimeout(() => {
+      router.replace(next);
+    }, 7000);
+
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
+      cancelled = true;
+      clearInterval(interval);
+      clearTimeout(redirectTimer);
     };
   }, [router, next]);
 
@@ -54,15 +66,18 @@ function VerifiedInner() {
           onClick={() => router.replace(next)}
           className="mt-4 inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium bg-primary text-primary-foreground hover:opacity-90"
         >
-          Continue
+          Continue now
         </button>
+
+        <p className="text-xs text-muted-foreground">
+          You’ll be redirected automatically…
+        </p>
       </div>
     </div>
   );
 }
 
 export default function VerifiedPage() {
-  // ✅ Suspense boundary fixes Next.js prerender error for useSearchParams()
   return (
     <Suspense
       fallback={

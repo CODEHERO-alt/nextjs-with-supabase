@@ -44,7 +44,10 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+      {/* ✅ gradient background (same as signup) */}
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(60%_40%_at_50%_0%,rgba(56,189,248,0.12),transparent_70%)]" />
+
+      <div className="relative w-full max-w-sm">
         <div className="mb-6 text-center">
           <div className="mx-auto mb-3 h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-sm font-semibold">
             BG

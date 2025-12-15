@@ -30,88 +30,80 @@ export default function SignupPage() {
     setMsg("Check your email to confirm your account.");
   }
 
-  async function signUpWithGoogle() {
-    setLoading(true);
-    setMsg(null);
-
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-
-    setLoading(false);
-    if (error) setMsg(error.message);
-  }
-
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen bg-slate-950 text-slate-50">
+      {/* subtle background */}
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(60%_40%_at_50%_0%,rgba(56,189,248,0.12),transparent_70%)]" />
+
+      <div className="relative mx-auto flex min-h-screen max-w-[420px] flex-col justify-center px-4 py-10">
+        {/* brand */}
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-sm font-semibold">
+          <div className="mx-auto mb-3 h-12 w-12 rounded-2xl border border-white/10 bg-white/[0.04] grid place-items-center text-sm font-semibold shadow-lg shadow-black/30">
             BG
           </div>
-          <h1 className="text-xl font-semibold">Create your account</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Create your account
+          </h1>
           <p className="mt-1 text-sm text-slate-300">
-            Start training your pressure routines.
+            Start training your mental game with focused routines.
           </p>
         </div>
 
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 shadow-lg shadow-black/30">
-          <button
-            onClick={signUpWithGoogle}
-            disabled={loading}
-            className="w-full rounded-lg border border-white/10 bg-white/[0.04] py-2 text-sm hover:bg-white/[0.06] disabled:opacity-50"
-          >
-            Sign up with Google
-          </button>
-
-          <div className="my-4 flex items-center gap-3">
-            <div className="h-px flex-1 bg-white/10" />
-            <span className="text-xs text-slate-400">or</span>
-            <div className="h-px flex-1 bg-white/10" />
-          </div>
-
-          <form onSubmit={signUp} className="space-y-3">
+        {/* card */}
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 shadow-xl shadow-black/30">
+          <form onSubmit={signUp} className="space-y-4">
             <div>
-              <label className="text-xs text-slate-300">Email address</label>
+              <label className="text-xs font-medium text-slate-300">
+                Email address
+              </label>
               <input
-                className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400/40"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400/40"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
+                placeholder="you@example.com"
               />
             </div>
 
             <div>
-              <label className="text-xs text-slate-300">Password</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-slate-300">
+                  Password
+                </label>
+                <span className="text-[11px] text-slate-500">
+                  8+ characters recommended
+                </span>
+              </div>
               <input
                 type="password"
-                className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400/40"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400/40"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"
+                placeholder="••••••••"
               />
-              <p className="mt-1 text-[11px] text-slate-400">
-                Use 8+ characters recommended.
-              </p>
             </div>
 
             {msg && (
-              <div className="rounded-lg border border-white/10 bg-white/[0.04] p-2 text-xs text-slate-200">
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3 text-xs text-slate-200">
                 {msg}
               </div>
             )}
 
             <button
               disabled={loading || !email || !password}
-              className="w-full rounded-lg bg-sky-500 py-2 text-sm font-medium text-white hover:bg-sky-400 disabled:opacity-50"
+              className="w-full rounded-xl bg-sky-500 py-2.5 text-sm font-semibold text-white hover:bg-sky-400 disabled:opacity-50"
             >
-              Create account
+              {loading ? "Creating..." : "Create account"}
             </button>
+
+            <p className="text-center text-xs text-slate-400">
+              By continuing, you agree to our Terms & Privacy Policy.
+            </p>
           </form>
         </div>
 
-        <p className="mt-4 text-center text-sm text-slate-300">
+        <p className="mt-5 text-center text-sm text-slate-300">
           Already have an account?{" "}
           <Link className="text-sky-300 hover:underline" href="/login">
             Sign in

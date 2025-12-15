@@ -10,6 +10,9 @@ import React, {
   ChangeEvent,
 } from "react";
 
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+
 /**
  * BGPT Landing — World-class iteration (single-file App.tsx)
  * Notes:
@@ -561,7 +564,11 @@ const Modal: React.FC<{
 const ChatBubble: React.FC<{ msg: ChatMessage }> = ({ msg }) => {
   const isUser = msg.role === "user";
   return (
-    <div className={`flex w-full gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
+    <div
+      className={`flex w-full gap-3 ${
+        isUser ? "justify-end" : "justify-start"
+      }`}
+    >
       {!isUser && (
         <div className="mt-1 flex h-7 w-7 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-sky-400 text-[11px] font-semibold text-white shrink-0">
           BG
@@ -1454,15 +1461,11 @@ const FinalCTASection: React.FC<{ onWatchDemo: () => void }> = ({ onWatchDemo })
                 </li>
                 <li className="flex gap-2">
                   <span className="mt-1 h-1.5 w-1.5 rounded-full bg-purple-400" />
-                  <span>
-                    Get a routine (reset / script / if-then plan).
-                  </span>
+                  <span>Get a routine (reset / script / if-then plan).</span>
                 </li>
                 <li className="flex gap-2">
                   <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                  <span>
-                    Rehearse it in practice so it shows up in games.
-                  </span>
+                  <span>Rehearse it in practice so it shows up in games.</span>
                 </li>
               </ul>
 
@@ -1497,6 +1500,24 @@ const FinalCTASection: React.FC<{ onWatchDemo: () => void }> = ({ onWatchDemo })
 
 const TopNav: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
+
+  const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user ?? null);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase]);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 14);
@@ -1567,13 +1588,59 @@ const TopNav: React.FC = () => {
             >
               Pricing
             </a>
-            <a
-              href={OPEN_APP_URL}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-purple-500 to-sky-400 px-3.5 py-2 text-[11px] font-medium text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-400/45 hover:-translate-y-0.5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70"
-            >
-              <span>Try BGPT</span>
-              <span className="text-base leading-none">↗</span>
-            </a>
+
+            {!user ? (
+              <>
+                <a
+                  href={LOGIN_URL}
+                  className="hidden sm:inline-flex rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] text-slate-200 hover:bg-white/[0.06] hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+                >
+                  Log in
+                </a>
+
+                <a
+                  href={SIGNUP_URL}
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-purple-500 to-sky-400 px-3.5 py-2 text-[11px] font-medium text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-400/45 hover:-translate-y-0.5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70"
+                >
+                  <span>Get started</span>
+                  <span className="text-base leading-none">↗</span>
+                </a>
+              </>
+            ) : (
+              <div className="relative group">
+                <button className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-[11px] text-slate-200 hover:bg-black/60 focus:outline-none">
+                  <span className="h-6 w-6 rounded-full bg-gradient-to-br from-purple-500 to-sky-400 flex items-center justify-center text-[10px] font-semibold text-white">
+                    {user.email?.[0]?.toUpperCase()}
+                  </span>
+                  <span className="hidden sm:inline">Account</span>
+                </button>
+
+                {/* Dropdown */}
+                <div className="absolute right-0 mt-2 w-40 rounded-2xl border border-white/10 bg-black/80 backdrop-blur-xl shadow-xl opacity-0 invisible group-hover:visible group-hover:opacity-100 transition-all">
+                  <button
+                    onClick={() => router.push("/profile")}
+                    className="block w-full px-4 py-2 text-left text-[11px] text-slate-200 hover:bg-white/[0.06]"
+                  >
+                    Profile
+                  </button>
+                  <button
+                    onClick={() => router.push("/account")}
+                    className="block w-full px-4 py-2 text-left text-[11px] text-slate-200 hover:bg-white/[0.06]"
+                  >
+                    Account
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await supabase.auth.signOut();
+                      router.refresh();
+                    }}
+                    className="block w-full px-4 py-2 text-left text-[11px] text-red-300 hover:bg-red-500/10"
+                  >
+                    Log out
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

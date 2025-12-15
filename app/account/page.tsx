@@ -14,9 +14,9 @@ export default async function AccountPage() {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          );
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
         },
       },
     }
@@ -34,6 +34,7 @@ export default async function AccountPage() {
       <h1 className="text-2xl font-semibold">Account</h1>
 
       <div className="mt-6 space-y-4">
+        {/* Plan */}
         <div className="rounded-xl border border-white/10 bg-black/20 p-5">
           <div className="text-sm font-medium">Plan</div>
           <div className="mt-1 text-sm text-slate-300">
@@ -41,6 +42,7 @@ export default async function AccountPage() {
           </div>
         </div>
 
+        {/* Usage */}
         <div className="rounded-xl border border-white/10 bg-black/20 p-5">
           <div className="text-sm font-medium">Usage</div>
           <div className="mt-1 text-sm text-slate-300">
@@ -48,4 +50,14 @@ export default async function AccountPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border borde
+        {/* Account info */}
+        <div className="rounded-xl border border-white/10 bg-black/20 p-5">
+          <div className="text-sm font-medium">Signed in as</div>
+          <div className="mt-1 text-sm text-slate-300">
+            {user.email}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

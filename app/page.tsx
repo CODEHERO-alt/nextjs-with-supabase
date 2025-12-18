@@ -251,15 +251,15 @@ const DELIVERABLES: DeliverableItem[] = [
 const FAQ: FAQItem[] = [
   {
     q: "Is this therapy?",
-    a: "No. BGPT is performance coaching — routines, attention control, and pressure skills. If you need mental health care or crisis support, use local professional services.",
+    a: "No. Dr. Brett GPT is performance coaching — routines, attention control, and pressure skills. If you need mental health care or crisis support, use local professional services to feel better and remember life is a blessing.",
   },
   {
     q: "Where does the coaching happen?",
-    a: "Inside your BGPT product (your own app) — not inside ChatGPT. You’ll start sessions there and get outputs like scripts and reset plans.",
+    a: "This coaching happens in our main app Dr. Brett GPT, after signing up & selecting a plan when you click on Try Brett GPT. You’ll start sessions there and get Responses for your questions, queries, scripts or reset plans.",
   },
   {
     q: "Do I need to sign up?",
-    a: "You can offer signup or guest access. The site is designed so you can keep onboarding minimal.",
+    a: "So you actually need to sign up with us as a requirement of accessing Dr. Brett GPT or Brett GPT, But This also Has your sessions kept in your account .",
   },
   {
     q: "How fast will I feel a difference?",
@@ -267,7 +267,7 @@ const FAQ: FAQItem[] = [
   },
   {
     q: "Is my data private?",
-    a: "Design it so sessions are private by default. Keep the promise simple: you control what you share, and you can delete your sessions.",
+    a: "We keep your data safe with us as subjected to our policies. You control what you share, and you can delete your sessions as well.",
   },
 ];
 
@@ -978,7 +978,7 @@ const HeroSection: React.FC<{ onWatchDemo: () => void }> = ({ onWatchDemo }) => 
           </h1>
 
           <p className="mt-3 md:mt-4 text-sm md:text-base text-slate-200/90 leading-relaxed max-w-xl">
-            BGPT helps you handle the exact moment you tighten — and gives you a
+            Dr. Brett GPT helps you handle the exact moment you tighten — and gives you a
             routine you can run{" "}
             <span className="font-semibold text-slate-50">tonight</span>.
           </p>
@@ -999,7 +999,7 @@ const HeroSection: React.FC<{ onWatchDemo: () => void }> = ({ onWatchDemo }) => 
           </div>
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
-            <PrimaryButton href={OPEN_APP_URL} ariaLabel="Try BGPT now">
+            <PrimaryButton href={OPEN_APP_URL} ariaLabel="Try Dr.Brett GPT now">
               <span>Try BGPT now</span>
               <span className="text-lg leading-none">↗</span>
             </PrimaryButton>
@@ -1155,7 +1155,7 @@ const MomentsSection: React.FC = () => {
       id="moments"
       eyebrow="Moments we train"
       title="Athletes don’t buy motivation — they buy help for the exact moment."
-      kicker="Pick the moment. BGPT outputs a routine or script you can rehearse in practice until it shows up under pressure."
+      kicker="Pick the moment. Dr. Brett GPT outputs a routine or script you can rehearse in practice until it shows up under pressure."
       align="left"
       tone="loud"
     >
@@ -1217,7 +1217,7 @@ const DeliverablesSection: React.FC = () => {
       </div>
 
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-        <PrimaryButton href={OPEN_APP_URL} ariaLabel="Try BGPT now">
+        <PrimaryButton href={OPEN_APP_URL} ariaLabel="Try Dr. Brett GPT now">
           <span>Try BGPT now</span>
           <span className="text-lg leading-none">↗</span>
         </PrimaryButton>
@@ -1235,7 +1235,7 @@ const FrameworkSection: React.FC = () => {
       id="framework"
       eyebrow="Core framework"
       title="A framework is useful only if it becomes automatic."
-      kicker="BGPT uses a simple structure to turn messy pressure into clear routines. Keep it balanced: enough structure to guide, not so much it feels preachy."
+      kicker="Dr. Brett GPT uses a simple structure to turn messy pressure into clear routines. Keep it balanced: enough structure to guide, not so much it feels preachy."
       align="left"
     >
       <div className="grid gap-6 md:grid-cols-[1.15fr,1fr] items-start">
@@ -1401,7 +1401,7 @@ const FAQSection: React.FC = () => {
           </p>
 
           <div className="mt-5 flex flex-col gap-2.5">
-            <PrimaryButton href={OPEN_APP_URL} ariaLabel="Open BGPT now">
+            <PrimaryButton href={OPEN_APP_URL} ariaLabel="Open Dr. Brett GPT now">
               <span>Open BGPT</span>
               <span className="text-lg leading-none">↗</span>
             </PrimaryButton>
@@ -1475,7 +1475,7 @@ const FinalCTASection: React.FC<{ onWatchDemo: () => void }> = ({ onWatchDemo })
             </div>
 
             <div className="flex flex-col gap-3">
-              <PrimaryButton href={OPEN_APP_URL} ariaLabel="Open BGPT app">
+              <PrimaryButton href={OPEN_APP_URL} ariaLabel="Open Dr. Brett GPT app">
                 <span>Open BGPT</span>
                 <span className="text-lg leading-none">↗</span>
               </PrimaryButton>
@@ -1730,7 +1730,7 @@ const Footer: React.FC = () => {
             </a>
           </div>
           <p className="text-[10px] text-slate-500">
-            © 2025 BGPT · All rights reserved.
+            © 2025 Dr. Brett GPT · All rights reserved.
           </p>
         </div>
       </div>
@@ -1775,7 +1775,7 @@ const App: React.FC = () => {
 
       <Footer />
 
-      <Modal open={demoOpen} onClose={closeDemo} title="BGPT — 45 second demo">
+      <Modal open={demoOpen} onClose={closeDemo} title="Dr. Brett GPT — 45 second demo">
         <div className="aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-black/60">
           {/* Replace with your own player; this is safe default */}
           <video
@@ -1791,7 +1791,7 @@ const App: React.FC = () => {
           </div>
           <div className="flex items-center gap-2">
             <SecondaryButton onClick={closeDemo}>Close</SecondaryButton>
-            <PrimaryButton href={OPEN_APP_URL}>Open BGPT ↗</PrimaryButton>
+            <PrimaryButton href={OPEN_APP_URL}>Open Dr. Brett GPT ↗</PrimaryButton>
           </div>
         </div>
       </Modal>

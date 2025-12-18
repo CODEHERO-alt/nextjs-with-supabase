@@ -714,7 +714,7 @@ const ChatDemo: React.FC<{ onWatchDemo: () => void }> = ({ onWatchDemo }) => {
 
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm text-slate-100">
-              <span className="font-medium">BGPT</span>
+              <span className="font-medium">Dr.Brett GPT</span>
               <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/40 px-2 py-0.5 text-[10px] text-slate-200">
                 Demo preview
               </span>
@@ -734,8 +734,8 @@ const ChatDemo: React.FC<{ onWatchDemo: () => void }> = ({ onWatchDemo }) => {
             <span>Watch 45s</span>
             <span className="text-base leading-none">▶</span>
           </SecondaryButton>
-          <PrimaryButton href={OPEN_APP_URL} ariaLabel="Open BGPT app">
-            <span>Open BGPT</span>
+          <PrimaryButton href={OPEN_APP_URL} ariaLabel="Open Dr.Brett GPT app">
+            <span>Open Dr,Brett GPT</span>
             <span className="text-lg leading-none">↗</span>
           </PrimaryButton>
         </div>
@@ -1000,7 +1000,7 @@ const HeroSection: React.FC<{ onWatchDemo: () => void }> = ({ onWatchDemo }) => 
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <PrimaryButton href={OPEN_APP_URL} ariaLabel="Try Dr.Brett GPT now">
-              <span>Try BGPT now</span>
+              <span>Try Dr.Brett GPT now</span>
               <span className="text-lg leading-none">↗</span>
             </PrimaryButton>
 
@@ -1218,7 +1218,7 @@ const DeliverablesSection: React.FC = () => {
 
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
         <PrimaryButton href={OPEN_APP_URL} ariaLabel="Try Dr. Brett GPT now">
-          <span>Try BGPT now</span>
+          <span>Try Dr.Brett GPT now</span>
           <span className="text-lg leading-none">↗</span>
         </PrimaryButton>
         <SecondaryButton href="#faq" ariaLabel="Read FAQ">
@@ -1402,7 +1402,7 @@ const FAQSection: React.FC = () => {
 
           <div className="mt-5 flex flex-col gap-2.5">
             <PrimaryButton href={OPEN_APP_URL} ariaLabel="Open Dr. Brett GPT now">
-              <span>Open BGPT</span>
+              <span>Open Dr.Brett GPT</span>
               <span className="text-lg leading-none">↗</span>
             </PrimaryButton>
             <SecondaryButton href={PRICING_URL} ariaLabel="See pricing">
@@ -1476,7 +1476,7 @@ const FinalCTASection: React.FC<{ onWatchDemo: () => void }> = ({ onWatchDemo })
 
             <div className="flex flex-col gap-3">
               <PrimaryButton href={OPEN_APP_URL} ariaLabel="Open Dr. Brett GPT app">
-                <span>Open BGPT</span>
+                <span>Open Dr.Brett GPT</span>
                 <span className="text-lg leading-none">↗</span>
               </PrimaryButton>
               <SecondaryButton onClick={onWatchDemo} ariaLabel="Watch demo">
@@ -1555,7 +1555,7 @@ const TopNav: React.FC = () => {
             />
             <div className="flex flex-col leading-tight">
               <span className="text-xs md:text-sm font-semibold text-white tracking-[-0.01em]">
-                BGPT
+                Dr.Brett GPT
               </span>
               <span className="text-[10px] md:text-[11px] text-slate-300">
                 Mental performance coach
@@ -1690,7 +1690,7 @@ const Footer: React.FC = () => {
               className="h-7 w-7 rounded-2xl border border-white/10 object-cover"
             />
             <span className="text-xs md:text-sm font-semibold text-white">
-              BGPT
+              Dr.Brett GPT
             </span>
           </div>
           <p className="text-[11px] md:text-xs text-slate-400 max-w-md leading-relaxed">
@@ -1726,7 +1726,7 @@ const Footer: React.FC = () => {
               href={OPEN_APP_URL}
               className="text-[11px] md:text-xs text-slate-300 hover:text-white underline/50 decoration-slate-600 hover:decoration-slate-200"
             >
-              Open BGPT
+              Open Dr.Brett GPT
             </a>
           </div>
           <p className="text-[10px] text-slate-500">

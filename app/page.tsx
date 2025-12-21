@@ -27,6 +27,7 @@ const LOGIN_URL = "/login";
 const SIGNUP_URL = "/signup";
 const WATCH_DEMO_URL = "https://YOUR_DOMAIN.com/demo.mp4"; // keep or replace later
 const PRICING_URL = "/pricing"; // placeholder so it doesn't go nowhere
+const TIPS_YIPS_AMAZON_URL = "https://www.amazon.com/dp/B0DDCZQ857"; // Tips & Yips — Kindle
 
 type ChatRole = "user" | "coach";
 
@@ -1310,6 +1311,129 @@ const FrameworkSection: React.FC = () => {
   );
 };
 
+/* ----------------------------- Tips & Yips Book Section ----------------------------- */
+
+const TipsAndYipsSection: React.FC = () => {
+  const fundamentals = [
+    "Presence",
+    "Perseverance",
+    "Patience",
+    "Perspective",
+    "Poise",
+  ];
+
+  return (
+    <Section
+      id="tips-yips"
+      eyebrow="Book"
+      title='“Tips & Yips” — take the mental game with you.'
+      kicker="Dr. Brett’s book gives athletes a short, focused way to review the core mental game tools between sessions with Dr. Brett GPT."
+      align="left"
+    >
+      <div className="grid items-center gap-6 md:grid-cols-[minmax(0,0.9fr),minmax(0,1.1fr)] lg:grid-cols-[minmax(0,0.85fr),minmax(0,1.15fr)]">
+        {/* Left: book-style card */}
+        <div className="w-full max-w-sm mx-auto md:mx-0">
+          <SurfaceC className="p-5">
+            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-5">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.22),transparent_60%),radial-gradient(circle_at_bottom,_rgba(249,115,22,0.18),transparent_60%)] opacity-80" />
+              <div className="relative z-10 flex h-full flex-col justify-between gap-4">
+                <div className="space-y-2">
+                  <p className="text-[10px] uppercase tracking-[0.22em] text-emerald-200/90">
+                    Book spotlight
+                  </p>
+                  <h3 className="text-2xl font-semibold tracking-tight text-white">
+                    Tips &amp; Yips
+                  </h3>
+                  <p className="text-xs font-medium text-emerald-100/95">
+                    Master the Mental Game: Tips to Conquer Your Yips
+                  </p>
+                  <p className="text-[11px] text-slate-300/90">
+                    By Dr. Brett — sports psychologist &amp; mental game coach.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5 text-[11px] text-slate-100/95">
+                  <p>• Conquer performance anxiety and nerves under pressure.</p>
+                  <p>• Turn “yips” into repeatable, confident execution.</p>
+                  <p>• Build routines you can scan before practice or a game.</p>
+                </div>
+
+                <div className="flex items-center justify-between text-[10px] text-slate-300 mt-1">
+                  <span>Format: Kindle Edition</span>
+                  <span>Approx. 45 pages</span>
+                </div>
+              </div>
+            </div>
+          </SurfaceC>
+        </div>
+
+        {/* Right: copy + fundamentals + CTA */}
+        <div className="w-full max-w-xl space-y-6">
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300/90">
+              Why this matters with Dr. Brett GPT
+            </p>
+            <p className="text-sm md:text-base text-slate-200/90 leading-relaxed">
+              <span className="font-semibold text-slate-50">
+                Tips &amp; Yips: Tips for Mastering Your Yips
+              </span>{" "}
+              is a tight, practical guide for athletes who feel blocked by
+              nerves, self-doubt, or “yips.” It takes the same mental game
+              principles that power Dr. Brett GPT and puts them into short,
+              readable chapters you can revisit on your phone, tablet, or
+              Kindle before practices, tournaments, and big days.
+            </p>
+            <p className="text-[11px] md:text-sm text-slate-300 leading-relaxed">
+              Use the book to{" "}
+              <span className="font-semibold text-slate-50">
+                review the fundamentals
+              </span>{" "}
+              and then jump into Dr. Brett GPT to build a routine for your exact
+              moment — mistake, clutch, injury return, or confidence dip.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">
+              The 5 fundamentals highlighted
+            </p>
+            <div className="flex flex-wrap gap-2.5">
+              {fundamentals.map((item, index) => (
+                <div
+                  key={item}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-black/45 px-3 py-1.5 text-[11px] text-slate-50"
+                >
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-sky-400 text-[10px] font-semibold text-white">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span className="tracking-[0.18em] uppercase">{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4 pt-1">
+            <PrimaryButton
+              href={TIPS_YIPS_AMAZON_URL}
+              ariaLabel='Buy "Tips & Yips" on Amazon'
+              className="shadow-emerald-400/30 hover:shadow-emerald-300/40"
+            >
+              <span>Buy “Tips &amp; Yips” on Amazon</span>
+              <span className="text-lg leading-none">↗</span>
+            </PrimaryButton>
+            <p className="text-[11px] md:text-xs text-slate-300 max-w-xs leading-relaxed">
+              Instant Kindle download. Read the book, then come back to Dr.
+              Brett GPT to turn the ideas into your personal routines.
+            </p>
+          </div>
+        </div>
+      </div>
+    </Section>
+  );
+};
+
+/* ----------------------------- Stories / FAQ / CTA ----------------------------- */
+
 const StoriesSection: React.FC = () => {
   return (
     <Section
@@ -1570,11 +1694,20 @@ const TopNav: React.FC = () => {
             <a href="#moments" className="hover:text-white transition-colors duration-150">
               Moments
             </a>
-            <a href="#deliverables" className="hover:text-white transition-colors duration-150">
+            <a
+              href="#deliverables"
+              className="hover:text-white transition-colors duration-150"
+            >
               What you get
             </a>
-            <a href="#framework" className="hover:text-white transition-colors duration-150">
+            <a
+              href="#framework"
+              className="hover:text-white transition-colors duration-150"
+            >
               Framework
+            </a>
+            <a href="#tips-yips" className="hover:text-white transition-colors duration-150">
+              Book
             </a>
             <a href="#faq" className="hover:text-white transition-colors duration-150">
               FAQ
@@ -1717,6 +1850,12 @@ const Footer: React.FC = () => {
               What you get
             </a>
             <a
+              href="#tips-yips"
+              className="text-[11px] md:text-xs text-slate-300 hover:text-white underline/50 decoration-slate-600 hover:decoration-slate-200"
+            >
+              Book
+            </a>
+            <a
               href="#faq"
               className="text-[11px] md:text-xs text-slate-300 hover:text-white underline/50 decoration-slate-600 hover:decoration-slate-200"
             >
@@ -1764,6 +1903,9 @@ const App: React.FC = () => {
 
       <SoftDivider label="FRAMEWORK" />
       <FrameworkSection />
+
+      <SoftDivider label="BOOK" />
+      <TipsAndYipsSection />
 
       <SoftDivider label="STORIES" />
       <StoriesSection />

@@ -1415,10 +1415,10 @@ const TipsAndYipsSection: React.FC = () => {
           <div className="flex flex-wrap items-center gap-4 pt-1">
             <PrimaryButton
               href={TIPS_YIPS_AMAZON_URL}
-              ariaLabel='Buy "Tips & Yips" on Amazon'
+              ariaLabel='View "Tips & Yips" on Amazon'
               className="shadow-emerald-400/30 hover:shadow-emerald-300/40"
             >
-              <span>Buy “Tips &amp; Yips” on Amazon</span>
+              <span>View “Tips &amp; Yips” on Amazon</span>
               <span className="text-lg leading-none">↗</span>
             </PrimaryButton>
             <p className="text-[11px] md:text-xs text-slate-300 max-w-xs leading-relaxed">

@@ -5,53 +5,41 @@ export default function PricingPage() {
     <main className="min-h-screen bg-slate-950 text-white px-6 py-16">
       <div className="mx-auto max-w-5xl">
         {/* Header */}
-        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
-          Choose your mental game plan
-        </h1>
-        <p className="mt-3 text-slate-300 max-w-2xl text-sm md:text-base">
-          All plans are built on Dr. Brett&apos;s Mental Game Fundamentals and give you
-          access to the BGPT coach. Upgrade as your season, stakes, and team grow.
-        </p>
-
-        {/* Global benefits */}
-        <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/60 px-5 py-4 text-xs md:text-sm text-slate-200 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-1">
-            <p className="font-medium text-slate-50">
-              Every plan includes:
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-100">
+              For athletes & high performers
             </p>
-            <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] md:text-xs text-slate-300">
-              <li className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                Private-by-default sessions
-              </li>
-              <li className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                Mental game frameworks & prompts
-              </li>
-              <li className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                Multi-device access (desktop & mobile)
-              </li>
-            </ul>
+            <h1 className="mt-4 text-3xl md:text-4xl font-semibold tracking-tight">
+              Choose your mental game plan
+            </h1>
+            <p className="mt-3 text-slate-300 max-w-2xl">
+              Unlock Dr. Brett GPT as your always-on mental game coach. Plans are
+              built around realistic usage caps so you stay focused, not
+              overwhelmed.
+            </p>
           </div>
-          <p className="text-[11px] md:text-xs text-slate-400 md:text-right">
-            Cancel anytime. No long-term contracts. Upgrade or downgrade between plans
-            as your needs change.
-          </p>
+          <div className="mt-4 md:mt-0 text-sm text-slate-300">
+            <p className="font-medium">No contracts. Cancel anytime.</p>
+            <p className="text-xs text-slate-400 mt-1">
+              Prices in USD. One seat = one athlete or high performer.
+            </p>
+          </div>
         </div>
 
         {/* Plans */}
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           <PlanCard
             title="Starter"
+            subtitle="Build your foundation"
             price="$13/mo"
-            tagline="For individual athletes testing BGPT"
-            audience="Ideal if you want a focused mental reset tool for this season."
+            usage="Up to 60 coach messages / month"
+            bestFor="Athletes testing BGPT or using it a few times per week."
             points={[
-              "Up to 60 chat sessions per month",
-              "Core routines: Reset, Clutch, Post-game review",
-              "Save and revisit last 5 sessions",
-              "Email support within 48 hours",
+              "Core 5 Fundamentals routines",
+              "Pre-game & post-game check-ins",
+              "Save up to 5 favorite sessions",
+              "Private by default — your data stays yours",
             ]}
             actionText="Start with Starter"
             plan="starter"
@@ -59,58 +47,82 @@ export default function PricingPage() {
 
           <PlanCard
             title="Pro"
+            subtitle="For serious competitors"
             price="$22/mo"
-            tagline="For serious competitors & high performers"
-            audience="Best if you rely on your mental game across practices, games, and big moments."
+            usage="Up to 250 coach messages / month"
+            bestFor="Athletes & performers who want BGPT as a true daily coach."
+            points={[
+              "Everything in Starter",
+              "Advanced pressure & clutch protocols",
+              "Deep-dive post-game breakdowns",
+              "Unlimited saved sessions & notes",
+              "Priority in-product support",
+            ]}
             highlight
             badgeText="Most popular"
-            points={[
-              "Unlimited chat sessions",
-              "Full Fundamentals library + deep-dive prompts",
-              "Session history & notes you can search",
-              "Game-day & pressure-moment scripts",
-              "Priority support & early feature access",
-            ]}
-            actionText="Start Pro"
+            actionText="Unlock Pro coaching"
             plan="pro"
           />
 
           <PlanCard
             title="Team"
+            subtitle="For coaches & small squads"
             price="$59/mo"
-            tagline="For coaches, squads, and small teams"
-            audience="Built for coaches and leaders who want a shared mental game language."
+            usage="Up to 800 pooled messages / month"
+            bestFor="Coaches, academies, and small teams wanting shared structure."
             points={[
-              "Up to 8 athlete seats",
-              "Shared routines & team-level prompts",
-              "Unified team session history (coach view, later)",
-              "Team check-ins & review templates",
-              "Priority onboarding guidance (via email)",
+              "Up to 5 athletes included",
+              "Shared routines & templates for the squad",
+              "Pooled message usage across the team",
+              "Coach overview of sessions (beta)",
+              "Priority roadmap input for new features",
             ]}
-            actionText="Start Team"
+            actionText="Get Team access"
             plan="team"
           />
         </div>
 
-        {/* Footer actions */}
+        {/* All plans include */}
+        <section className="mt-12 rounded-2xl border border-white/10 bg-white/5 p-6 md:p-8">
+          <h2 className="text-sm font-semibold text-slate-100 tracking-wide uppercase">
+            All plans include
+          </h2>
+          <div className="mt-4 grid gap-4 md:grid-cols-3 text-sm text-slate-200">
+            <FeatureItem title="Real mental game structure">
+              Sessions grounded in the 5 Fundamentals: Presence, Patience,
+              Perspective, Poise, Perseverance.
+            </FeatureItem>
+            <FeatureItem title="Performance-ready sessions">
+              Designed for real moments: before games, after mistakes, late in
+              the 4th quarter, or after tough losses.
+            </FeatureItem>
+            <FeatureItem title="Secure & private by design">
+              Conversations are private to your account. No public feed, no
+              social layer — just you and your coach.
+            </FeatureItem>
+          </div>
+        </section>
+
+        {/* Actions */}
         <div className="mt-10 flex flex-wrap gap-3">
           <Link
             href="/"
-            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10 transition"
+            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10"
           >
             Back home
           </Link>
           <Link
             href="/start"
-            className="rounded-xl bg-white text-slate-950 px-4 py-2 text-sm font-semibold hover:opacity-90 transition"
+            className="rounded-xl bg-white text-slate-950 px-4 py-2 text-sm font-semibold hover:opacity-90"
           >
             Re-check access
           </Link>
         </div>
 
-        <p className="mt-8 text-xs text-slate-400 max-w-xl">
-          Note: Payment flow is currently a placeholder. Next step is connecting Stripe (optional later: PayPal).
-          Pricing and inclusions may be adjusted as BGPT evolves, but you&apos;ll always see changes before you pay.
+        {/* Footnote / roadmap */}
+        <p className="mt-8 text-xs text-slate-400">
+          Payment flow is currently a placeholder. Next step is connecting Stripe
+          checkout (and optionally PayPal) to securely activate your plan.
         </p>
       </div>
     </main>
@@ -119,9 +131,10 @@ export default function PricingPage() {
 
 function PlanCard({
   title,
+  subtitle,
   price,
-  tagline,
-  audience,
+  usage,
+  bestFor,
   points,
   actionText,
   plan,
@@ -129,9 +142,10 @@ function PlanCard({
   badgeText,
 }: {
   title: string;
+  subtitle: string;
   price: string;
-  tagline: string;
-  audience: string;
+  usage: string;
+  bestFor: string;
   points: string[];
   actionText: string;
   plan: string;
@@ -140,37 +154,34 @@ function PlanCard({
 }) {
   const baseClasses =
     "rounded-2xl border p-6 flex flex-col h-full bg-gradient-to-b";
-  const styleClasses = highlight
-    ? "border-purple-400/40 from-purple-500/15 to-slate-950 shadow-[0_0_30px_rgba(168,85,247,0.35)]"
-    : "border-white/10 from-white/5 to-slate-950/60";
+  const highlightClasses = highlight
+    ? "border-purple-400/40 from-purple-500/10 to-slate-950/40 shadow-[0_0_40px_rgba(168,85,247,0.35)]"
+    : "border-white/10 from-white/5 to-slate-950/30";
 
   return (
-    <article className={`${baseClasses} ${styleClasses}`}>
+    <div className={`${baseClasses} ${highlightClasses}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-xs uppercase tracking-wide text-slate-400">
-            {tagline}
+            {subtitle}
           </div>
-          <h2 className="mt-1 text-lg font-semibold">{title}</h2>
-          <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-3xl font-semibold">{price}</span>
-            <span className="text-xs text-slate-400">USD, billed monthly</span>
-          </div>
+          <div className="mt-1 text-lg font-semibold">{title}</div>
+          <div className="mt-2 text-3xl font-semibold">{price}</div>
+          <div className="mt-1 text-xs text-slate-300">{usage}</div>
         </div>
-
         {highlight && (
           <span className="rounded-full border border-purple-300/30 bg-purple-500/20 px-2 py-1 text-[10px] text-purple-100">
-            {badgeText || "Recommended"}
+            {badgeText ?? "Recommended"}
           </span>
         )}
       </div>
 
-      <p className="mt-3 text-xs text-slate-300">{audience}</p>
+      <p className="mt-4 text-xs text-slate-300">{bestFor}</p>
 
       <ul className="mt-5 space-y-2 text-sm text-slate-200">
         {points.map((p) => (
           <li key={p} className="flex gap-2">
-            <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-sky-400" />
+            <span className="mt-2 h-1.5 w-1.5 rounded-full bg-sky-400" />
             <span>{p}</span>
           </li>
         ))}
@@ -182,16 +193,28 @@ function PlanCard({
         className="mt-6 pt-4 border-t border-white/10"
       >
         <input type="hidden" name="plan" value={plan} />
-        <button className="w-full rounded-xl bg-white text-slate-950 py-2.5 text-sm font-semibold hover:opacity-90 transition">
+        <button className="w-full rounded-xl bg-white text-slate-950 py-2.5 text-sm font-semibold hover:opacity-90">
           {actionText}
         </button>
       </form>
+    </div>
+  );
+}
 
-      {!highlight && (
-        <p className="mt-3 text-[11px] text-slate-400">
-          You can upgrade to Pro anytime in under 30 seconds.
-        </p>
-      )}
-    </article>
+function FeatureItem({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="flex items-center gap-2">
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+        <h3 className="text-sm font-semibold text-slate-50">{title}</h3>
+      </div>
+      <p className="mt-2 text-xs text-slate-300 leading-relaxed">{children}</p>
+    </div>
   );
 }

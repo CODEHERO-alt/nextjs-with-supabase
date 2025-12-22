@@ -26,8 +26,8 @@ const OPEN_APP_URL = "/start"; // protected area; redirects to /login if not log
 const LOGIN_URL = "/login";
 const SIGNUP_URL = "/signup";
 const WATCH_DEMO_URL = "https://YOUR_DOMAIN.com/demo.mp4"; // keep or replace later
-const PRICING_URL = "/pricing"; // placeholder so it doesn't go nowhere
-const TIPS_YIPS_AMAZON_URL = "https://www.amazon.com/dp/B0DDCZQ857"; // Tips & Yips — Kindle
+const PRICING_URL = "/pricing";
+const TIPS_YIPS_AMAZON_URL = "https://www.amazon.com/Tips-Yips-Mastering-Your-ebook/dp/B0DCZ2Q857"; // Tips & Yips — Kindle
 
 type ChatRole = "user" | "coach";
 

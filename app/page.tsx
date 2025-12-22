@@ -1066,7 +1066,7 @@ const StatsSection: React.FC = () => {
             Real shifts — not just motivation.
           </h2>
           <p className="mt-3 text-sm md:text-base text-slate-200/90 leading-relaxed">
-            Numbers are only useful if they’re grounded. Keep your measurement
+            Numbers are only useful if they’re grounded. We keep ours
             simple, transparent, and honest.
           </p>
         </div>
@@ -1075,7 +1075,7 @@ const StatsSection: React.FC = () => {
           <StatCard
             label="Average performance lift"
             value={`+${perfLift}%`}
-            footnote="+12% = self-reported performance marker after 6–8 weeks (add n=___)."
+            footnote="+12% self-reported performance marker after 6–8 weeks "
             emphasis
           />
           <StatCard
@@ -1155,7 +1155,7 @@ const MomentsSection: React.FC = () => {
     <Section
       id="moments"
       eyebrow="Moments we train"
-      title="Athletes don’t buy motivation — they buy help for the exact moment."
+      title="Athletes are built under pressure — but they also need help for that exact moment."
       kicker="Pick the moment. Dr. Brett GPT outputs a routine or script you can rehearse in practice until it shows up under pressure."
       align="left"
       tone="loud"
@@ -1195,7 +1195,7 @@ const DeliverablesSection: React.FC = () => {
       id="deliverables"
       eyebrow="What you get"
       title="In 10 minutes, you leave with something usable."
-      kicker="This is the difference between a nice conversation and actual training: a routine you can run on the field."
+      kicker="This is the difference between a nice conversation and actual training, We give you a routine you can run on the field."
       align="center"
     >
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -1236,7 +1236,7 @@ const FrameworkSection: React.FC = () => {
       id="framework"
       eyebrow="Core framework"
       title="A framework is useful only if it becomes automatic."
-      kicker="Dr. Brett GPT uses a simple structure to turn messy pressure into clear routines. Keep it balanced: enough structure to guide, not so much it feels preachy."
+      kicker="Dr. Brett GPT uses a simple structure to turn messy pressure into clear routines. Keeping it balanced: Enough structure to guide, not so much that it feels preachy."
       align="left"
     >
       <div className="grid gap-6 md:grid-cols-[1.15fr,1fr] items-start">

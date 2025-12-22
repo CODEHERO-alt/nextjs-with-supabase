@@ -1535,8 +1535,8 @@ const FAQSection: React.FC = () => {
           </div>
 
           <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-3 text-[11px] text-slate-300">
-            Privacy note: keep sessions private by default and let users delete
-            them.
+            Privacy note: We keep sessions private by default and let users delete
+            them in the chat app as subject to our policies.
           </div>
         </SurfaceC>
       </div>

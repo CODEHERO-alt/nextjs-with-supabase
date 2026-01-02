@@ -1594,7 +1594,13 @@ const FinalCTASection: React.FC<{ onWatchDemo: () => void }> = ({ onWatchDemo })
               </ul>
 
               <div className="text-[11px] text-slate-300">
-                Minimal disclaimers: performance coaching only. Not for emergencies.
+                Performance coaching only. Not for emergencies.{" "}
+                <a
+                  href="/legal"
+                  className="underline underline-offset-4 decoration-slate-600 hover:decoration-slate-200"
+                  >
+                  Legal disclaimer
+                </a>
               </div>
             </div>
 

@@ -317,6 +317,66 @@ function parseAssistantBlocks(text: string): RenderBlock[] {
   return blocks;
 }
 
+function titleCase(s: string) {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
+function mapTagToRoutine(tag: string): string {
+  const t = (tag || "").toLowerCase();
+  if (t.includes("reset")) return "Reset";
+  if (t.includes("clutch")) return "Clutch";
+  if (t.includes("review")) return "Post-game review";
+  return titleCase(tag);
+}
+
+function deriveMantraFromAssistant(text: string): string {
+  const t = (text || "").trim();
+  if (!t) return "Slow is smooth. Smooth is fast.";
+
+  // Prefer explicit Next step
+  const next =
+    t
+      .split("\n")
+      .map((l) => l.trim())
+      .find((l) => /^next step[:\-]/i.test(l)) || "";
+
+  if (next) return next.replace(/^next step[:\-]\s*/i, "").replace(/\.$/, "");
+
+  // Otherwise use first sentence (short)
+  const first = t.split(/(?<=[.!?])\s+/)[0]?.trim() || "";
+  const cleaned = first.replace(/^##\s+/, "").replace(/\.$/, "");
+  if (cleaned.length >= 8 && cleaned.length <= 90) return cleaned;
+
+  return "Slow is smooth. Smooth is fast.";
+}
+
+function deriveSessionNotes(text: string): string[] {
+  const blocks = parseAssistantBlocks(text || "");
+  const notes: string[] = [];
+
+  // Prefer bullets/numbered steps
+  for (const b of blocks) {
+    if (b.kind === "ul" || b.kind === "ol") {
+      for (const it of b.items) {
+        const clean = it.trim();
+        if (clean) notes.push(clean);
+        if (notes.length >= 3) return notes;
+      }
+    }
+  }
+
+  // Fallback: short paragraphs
+  for (const b of blocks) {
+    if (b.kind === "p") {
+      const clean = b.text.trim().replace(/\.$/, "");
+      if (clean.length >= 12 && clean.length <= 140) notes.push(clean);
+      if (notes.length >= 3) return notes;
+    }
+  }
+
+  return notes.slice(0, 3);
+}
+
 function InlineMarkdown({ text }: { text: string }) {
   const parts: Array<{ t: string; bold: boolean }> = [];
   const re = /\*\*(.+?)\*\*/g;
@@ -380,6 +440,10 @@ export default function ChatPage() {
 
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+
+  const [mantra, setMantra] = useState("Slow is smooth. Smooth is fast.");
+  const [activeRoutine, setActiveRoutine] = useState<string>("—");
+  const [sessionNotes, setSessionNotes] = useState<string[]>([]);
 
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const composingRef = useRef(false);
@@ -448,6 +512,19 @@ export default function ChatPage() {
 
   const active = useMemo(() => sessions.find((s) => s.id === activeId) ?? sessions[0], [sessions, activeId]);
 
+  useEffect(() => {
+    if (!active) return;
+
+    const lastAssistant = [...active.messages]
+      .reverse()
+      .find((m) => m.role === "assistant" && (m.content || "").trim());
+
+    if (!lastAssistant) return;
+
+    setMantra(deriveMantraFromAssistant(lastAssistant.content));
+    setSessionNotes(deriveSessionNotes(lastAssistant.content));
+  }, [activeId, active?.messages]);
+
   function markUserScrolling() {
     userScrollRef.current.active = true;
     if (userScrollRef.current.t) window.clearTimeout(userScrollRef.current.t);
@@ -506,8 +583,15 @@ export default function ChatPage() {
     setActiveId(s.id);
   }
 
-  function applyQuick(prompt: string) {
+  function applyQuick(prompt: string, tag?: string) {
     setInput(prompt);
+    if (tag) setActiveRoutine(mapTagToRoutine(tag));
+
+    // focus composer (safe: runs on click only)
+    requestAnimationFrame(() => {
+      const el = document.querySelector("textarea") as HTMLTextAreaElement | null;
+      el?.focus?.();
+    });
   }
 
   function resetActive() {
@@ -809,7 +893,7 @@ export default function ChatPage() {
                   {QUICK_ACTIONS.map((a) => (
                     <button
                       key={a.k}
-                      onClick={() => applyQuick(a.prompt)}
+                      onClick={() => applyQuick(a.prompt, a.tag)}
                       className="w-full rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-left hover:bg-white/5"
                       title={a.prompt}
                     >
@@ -833,7 +917,7 @@ export default function ChatPage() {
                 Coaching only — not medical care. If you’re in crisis, seek immediate local professional help.{" "}
                 <Link href="/legal" className="underline underline-offset-4 hover:text-white">
                   Legal disclaimer
-                  </Link>
+                </Link>
               </div>
             </div>
           </div>
@@ -956,7 +1040,7 @@ export default function ChatPage() {
                   {QUICK_ACTIONS.map((a) => (
                     <button
                       key={a.k}
-                      onClick={() => applyQuick(a.prompt)}
+                      onClick={() => applyQuick(a.prompt, a.tag)}
                       className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] text-slate-200 hover:bg-white/10"
                     >
                       {a.tag}
@@ -967,77 +1051,106 @@ export default function ChatPage() {
             </section>
 
             {/* Right panel — Performance Dashboard */}
-<aside className="hidden w-[360px] shrink-0 lg:block">
-  <div className="sticky top-[84px] space-y-4">
-    {/* Focus / Mantra */}
-    <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-      <div className="flex items-center justify-between">
-        <div className="text-[11px] font-semibold text-slate-300">Today’s focus</div>
-        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-          Mantra
-        </span>
-      </div>
-      <p className="mt-2 text-[13px] leading-6 text-slate-200">
-        Slow is smooth. Smooth is fast.
-      </p>
-      <p className="mt-2 text-[11px] leading-5 text-slate-400">
-        Want a custom mantra? Use a quick action or describe the moment.
-      </p>
-    </div>
+            <aside className="hidden w-[360px] shrink-0 lg:block">
+              <div className="sticky top-[84px] space-y-4">
+                {/* Focus / Mantra */}
+                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[11px] font-semibold text-slate-300">Today’s focus</div>
+                    <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
+                      Mantra
+                    </span>
+                  </div>
+                  <p className="mt-2 text-[13px] leading-6 text-slate-200">{mantra}</p>
+                  <p className="mt-2 text-[11px] leading-5 text-slate-400">
+                    Want a custom mantra? Use a quick action or describe the moment.
+                  </p>
+                </div>
 
-    {/* Mental Watchlist */}
-    <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-      <div className="text-[11px] font-semibold text-slate-300">Mental watchlist</div>
-      <div className="mt-3 space-y-2">
-        <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
-          <div className="text-[11px] font-semibold text-slate-200">Breath</div>
-          <div className="mt-1 text-[11px] leading-5 text-slate-400">One calm exhale before action.</div>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
-          <div className="text-[11px] font-semibold text-slate-200">Cue</div>
-          <div className="mt-1 text-[11px] leading-5 text-slate-400">One word that locks you in.</div>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
-          <div className="text-[11px] font-semibold text-slate-200">Next action</div>
-          <div className="mt-1 text-[11px] leading-5 text-slate-400">Only the next rep/play matters.</div>
-        </div>
-      </div>
-    </div>
+                {/* Active routine */}
+                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[11px] font-semibold text-slate-300">Active routine</div>
+                    <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
+                      Live
+                    </span>
+                  </div>
+                  <p className="mt-2 text-[13px] leading-6 text-slate-200">{activeRoutine}</p>
+                  <p className="mt-2 text-[11px] leading-5 text-slate-400">
+                    Tap a quick action to set a routine, or describe the moment.
+                  </p>
+                </div>
 
-    {/* Quick actions (duplicate, but dashboard-style) */}
-    <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-      <div className="text-[11px] font-semibold text-slate-300">Quick actions</div>
-      <div className="mt-3 grid grid-cols-1 gap-2">
-        {QUICK_ACTIONS.map((a) => (
-          <button
-            key={a.k}
-            onClick={() => applyQuick(a.prompt)}
-            className="rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-left hover:bg-white/5"
-            title={a.prompt}
-          >
-            <div className="flex items-center justify-between">
-              <div className="text-[12px] font-semibold text-slate-100">{a.title}</div>
-              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-                {a.tag}
-              </span>
-            </div>
-          </button>
-        ))}
-      </div>
-    </div>
+                {/* Mental Watchlist */}
+                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+                  <div className="text-[11px] font-semibold text-slate-300">Mental watchlist</div>
+                  <div className="mt-3 space-y-2">
+                    <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
+                      <div className="text-[11px] font-semibold text-slate-200">Breath</div>
+                      <div className="mt-1 text-[11px] leading-5 text-slate-400">One calm exhale before action.</div>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
+                      <div className="text-[11px] font-semibold text-slate-200">Cue</div>
+                      <div className="mt-1 text-[11px] leading-5 text-slate-400">One word that locks you in.</div>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
+                      <div className="text-[11px] font-semibold text-slate-200">Next action</div>
+                      <div className="mt-1 text-[11px] leading-5 text-slate-400">Only the next rep/play matters.</div>
+                    </div>
+                  </div>
+                </div>
 
-    {/* Safety (with link) */}
-    <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-      <div className="text-[11px] font-semibold text-slate-300">Safety</div>
-      <p className="mt-2 text-[12px] leading-6 text-slate-300">
-        Coaching only — not medical care. If you’re in crisis, seek immediate local professional help.{" "}
-        <Link href="/legal" className="underline underline-offset-4 hover:text-white">
-          Legal disclaimer
-        </Link>
-      </p>
-    </div>
-  </div>
-</aside>
+                {/* Session notes */}
+                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+                  <div className="text-[11px] font-semibold text-slate-300">Session notes</div>
+
+                  {sessionNotes.length ? (
+                    <ul className="mt-3 list-disc space-y-2 pl-5 text-[12px] leading-6 text-slate-200">
+                      {sessionNotes.map((n, idx) => (
+                        <li key={idx}>{n}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-[11px] leading-5 text-slate-400">
+                      Your key takeaways will appear here after the coach responds.
+                    </p>
+                  )}
+                </div>
+
+                {/* Quick actions (duplicate, but dashboard-style) */}
+                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+                  <div className="text-[11px] font-semibold text-slate-300">Quick actions</div>
+                  <div className="mt-3 grid grid-cols-1 gap-2">
+                    {QUICK_ACTIONS.map((a) => (
+                      <button
+                        key={a.k}
+                        onClick={() => applyQuick(a.prompt, a.tag)}
+                        className="rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-left hover:bg-white/5"
+                        title={a.prompt}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="text-[12px] font-semibold text-slate-100">{a.title}</div>
+                          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
+                            {a.tag}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Safety (with link) */}
+                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+                  <div className="text-[11px] font-semibold text-slate-300">Safety</div>
+                  <p className="mt-2 text-[12px] leading-6 text-slate-300">
+                    Coaching only — not medical care. If you’re in crisis, seek immediate local professional help.{" "}
+                    <Link href="/legal" className="underline underline-offset-4 hover:text-white">
+                      Legal disclaimer
+                    </Link>
+                  </p>
+                </div>
+              </div>
+            </aside>
           </div>
         </main>
       </div>

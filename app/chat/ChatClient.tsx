@@ -966,26 +966,78 @@ export default function ChatPage() {
               </div>
             </section>
 
-            {/* Right panel */}
-            <aside className="hidden w-[360px] shrink-0 lg:block">
-              <div className="sticky top-[84px] space-y-4">
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-                  <div className="text-[11px] font-semibold text-slate-300">How to use this coach</div>
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-[12px] leading-6 text-slate-300">
-                    <li>Describe the exact moment (time + situation).</li>
-                    <li>Say what breaks first (breath / legs / decision).</li>
-                    <li>Ask for one cue + one routine you can repeat.</li>
-                  </ul>
-                </div>
+            {/* Right panel — Performance Dashboard */}
+<aside className="hidden w-[360px] shrink-0 lg:block">
+  <div className="sticky top-[84px] space-y-4">
+    {/* Focus / Mantra */}
+    <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+      <div className="flex items-center justify-between">
+        <div className="text-[11px] font-semibold text-slate-300">Today’s focus</div>
+        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
+          Mantra
+        </span>
+      </div>
+      <p className="mt-2 text-[13px] leading-6 text-slate-200">
+        Slow is smooth. Smooth is fast.
+      </p>
+      <p className="mt-2 text-[11px] leading-5 text-slate-400">
+        Want a custom mantra? Use a quick action or describe the moment.
+      </p>
+    </div>
 
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-                  <div className="text-[11px] font-semibold text-slate-300">Safety</div>
-                  <p className="mt-2 text-[12px] leading-6 text-slate-300">
-                    Coaching only — not medical care. If you’re in crisis, seek immediate local professional help.
-                  </p>
-                </div>
-              </div>
-            </aside>
+    {/* Mental Watchlist */}
+    <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+      <div className="text-[11px] font-semibold text-slate-300">Mental watchlist</div>
+      <div className="mt-3 space-y-2">
+        <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
+          <div className="text-[11px] font-semibold text-slate-200">Breath</div>
+          <div className="mt-1 text-[11px] leading-5 text-slate-400">One calm exhale before action.</div>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
+          <div className="text-[11px] font-semibold text-slate-200">Cue</div>
+          <div className="mt-1 text-[11px] leading-5 text-slate-400">One word that locks you in.</div>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
+          <div className="text-[11px] font-semibold text-slate-200">Next action</div>
+          <div className="mt-1 text-[11px] leading-5 text-slate-400">Only the next rep/play matters.</div>
+        </div>
+      </div>
+    </div>
+
+    {/* Quick actions (duplicate, but dashboard-style) */}
+    <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+      <div className="text-[11px] font-semibold text-slate-300">Quick actions</div>
+      <div className="mt-3 grid grid-cols-1 gap-2">
+        {QUICK_ACTIONS.map((a) => (
+          <button
+            key={a.k}
+            onClick={() => applyQuick(a.prompt)}
+            className="rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-left hover:bg-white/5"
+            title={a.prompt}
+          >
+            <div className="flex items-center justify-between">
+              <div className="text-[12px] font-semibold text-slate-100">{a.title}</div>
+              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
+                {a.tag}
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+
+    {/* Safety (with link) */}
+    <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+      <div className="text-[11px] font-semibold text-slate-300">Safety</div>
+      <p className="mt-2 text-[12px] leading-6 text-slate-300">
+        Coaching only — not medical care. If you’re in crisis, seek immediate local professional help.{" "}
+        <Link href="/legal" className="underline underline-offset-4 hover:text-white">
+          Legal disclaimer
+        </Link>
+      </p>
+    </div>
+  </div>
+</aside>
           </div>
         </main>
       </div>

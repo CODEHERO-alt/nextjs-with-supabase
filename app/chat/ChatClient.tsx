@@ -20,174 +20,254 @@ type Message = {
 type Session = {
   id: string;
   title: string;
-  createdAt: number;
   updatedAt: number;
   messages: Message[];
 };
 
+const BRAND = {
+  name: "Dr. Brett GPT",
+  subtitle: "Mental game coach for athletes",
+};
+
+/**
+ * Reduced quick actions: 3 (more room for sessions list)
+ * Keep the most-used / highest-value:
+ * - Reset (after mistake)
+ * - Clutch (late-game)
+ * - Post-game review
+ */
 const QUICK_ACTIONS: Array<{
   k: string;
   title: string;
-  tag: string;
   prompt: string;
+  tag: string;
 }> = [
   {
-    k: "pregame",
-    title: "Pre-game prep",
-    tag: "Warm-up",
-    prompt:
-      "I have a big performance coming up. Help me build a simple pre-game mental warm-up (2–5 minutes) that gets me calm, focused, and confident.",
-  },
-  {
     k: "reset",
-    title: "Reset after mistake",
-    tag: "Reset",
+    title: "90s Reset (after mistake)",
     prompt:
-      "I just made a mistake and I can feel myself spiraling. Give me a quick reset routine I can do in 15–30 seconds to get back into the moment.",
+      "Build me a 90-second reset routine I can run after a mistake. My sport is ___. The moment I struggle most is ___.",
+    tag: "Reset",
   },
   {
     k: "clutch",
-    title: "Clutch moment",
+    title: "Clutch cue (late-game)",
+    prompt:
+      "Late in games I rush decisions. Give me one cue + one breath pattern + one next-action focus for the next play.",
     tag: "Clutch",
-    prompt:
-      "I’m entering a high-pressure moment. Give me a short, step-by-step pressure plan (breathing + cue + focus target) I can run immediately.",
-  },
-  {
-    k: "confidence",
-    title: "Confidence rebuild",
-    tag: "Confidence",
-    prompt:
-      "My confidence is low lately. Help me rebuild it with a simple daily plan (5 minutes/day) + one mindset reframe I can use all week.",
   },
   {
     k: "review",
-    title: "Post-game review",
-    tag: "Review",
+    title: "5-min post-game review",
     prompt:
-      "Help me do a short post-performance review (wins, lessons, next steps) without beating myself up. Keep it structured and practical.",
+      "Guide me through a 5-minute post-game review. Today I did ___. I struggled with ___. One thing I’ll practice is ___.",
+    tag: "Review",
   },
 ];
 
-function rid(prefix = "id") {
-  return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
+/** ---------------- Storage ---------------- */
+const STORAGE_KEY = "bgpt_chat_v1";
+
+/** ---------------- Build-safe deterministic ID helpers ---------------- */
+let __uidCounter = 0;
+/** Render-safe deterministic ID (no random/Date/crypto) */
+function uid(prefix = "x") {
+  __uidCounter = (__uidCounter + 1) % Number.MAX_SAFE_INTEGER;
+  return `${prefix}_static_${__uidCounter.toString(16)}`;
+}
+/** Runtime ID (event handlers / effects only) */
+function rid(prefix = "m") {
+  const c = (globalThis as any)?.crypto as Crypto | undefined;
+  if (c?.randomUUID) return `${prefix}_${c.randomUUID()}`;
+
+  __uidCounter = (__uidCounter + 1) % Number.MAX_SAFE_INTEGER;
+  return `${prefix}_${__uidCounter.toString(16)}`;
 }
 
-/** ---------- Background ---------- */
+function formatTime(ts: number) {
+  if (!ts) return "—";
+  const d = new Date(ts);
+  const hh = d.getHours().toString().padStart(2, "0");
+  const mm = d.getMinutes().toString().padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+function detectTone(text: string): Tone {
+  const t = text.toLowerCase();
+  const win =
+    /(won|win|crushed|great|best|proud|good game|played well|nailed|improved|dominated|personal best|pb)/.test(t);
+  const loss =
+    /(lost|loss|terrible|awful|hate|failed|embarrass|choked|disappointed|bummed|frustrated|angry)/.test(t);
+  if (win && !loss) return "celebrate";
+  if (loss) return "reframe";
+  return "steady";
+}
+
+/** ---------------- Interactive background ----------------
+ * - Pointer-follow radial lights via CSS variables (--mx/--my)
+ * - Gentle ambient drift so mobile still feels alive
+ * - Respects prefers-reduced-motion
+ * - Fixed layer ensures background never “cuts off” at page bottom
+ */
 function useInteractiveBackground() {
   useEffect(() => {
     const root = document.documentElement;
 
+    const prefersReduced =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // Set defaults so it looks good before first mouse move
+    root.style.setProperty("--mx", "50%");
+    root.style.setProperty("--my", "18%");
+
+    // Ambient drift (works even without mouse). Keep subtle.
     let raf = 0;
-    const onMove = (e: PointerEvent) => {
-      const x = (e.clientX / window.innerWidth) * 100;
-      const y = (e.clientY / window.innerHeight) * 100;
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        root.style.setProperty("--mx", `${x}%`);
-        root.style.setProperty("--my", `${y}%`);
-      });
+    let t0 = performance.now();
+    const drift = () => {
+      const t = (performance.now() - t0) / 1000;
+      const x = 50 + Math.sin(t * 0.18) * 6;
+      const y = 18 + Math.cos(t * 0.14) * 5;
+      if (prefersReduced) return;
+      root.style.setProperty("--dx", `${x}%`);
+      root.style.setProperty("--dy", `${y}%`);
+      raf = requestAnimationFrame(drift);
     };
 
+    // Pointer follow (smoothed)
+    let targetX = 0.5;
+    let targetY = 0.18;
+    let currentX = 0.5;
+    let currentY = 0.18;
+    let lastPointerAt = 0;
+
+    const onMove = (e: PointerEvent) => {
+      const w = Math.max(1, window.innerWidth);
+      const h = Math.max(1, window.innerHeight);
+      targetX = Math.min(0.98, Math.max(0.02, e.clientX / w));
+      targetY = Math.min(0.98, Math.max(0.02, e.clientY / h));
+      lastPointerAt = performance.now();
+    };
+
+    const animate = () => {
+      const ease = 0.10;
+      currentX = currentX + (targetX - currentX) * ease;
+      currentY = currentY + (targetY - currentY) * ease;
+
+      const idle = performance.now() - lastPointerAt > 2500;
+      if (idle && !prefersReduced) {
+        const dx = parseFloat(getComputedStyle(root).getPropertyValue("--dx")) || 50;
+        const dy = parseFloat(getComputedStyle(root).getPropertyValue("--dy")) || 18;
+        const driftX = dx / 100;
+        const driftY = dy / 100;
+        currentX = currentX + (driftX - currentX) * 0.02;
+        currentY = currentY + (driftY - currentY) * 0.02;
+      }
+
+      root.style.setProperty("--mx", `${Math.round(currentX * 1000) / 10}%`);
+      root.style.setProperty("--my", `${Math.round(currentY * 1000) / 10}%`);
+
+      raf = requestAnimationFrame(animate);
+    };
+
+    if (!prefersReduced) {
+      raf = requestAnimationFrame(drift);
+    }
+    raf = requestAnimationFrame(animate);
+
     window.addEventListener("pointermove", onMove, { passive: true });
+
     return () => {
-      cancelAnimationFrame(raf);
       window.removeEventListener("pointermove", onMove);
+      cancelAnimationFrame(raf);
     };
   }, []);
 }
 
-/** ---------- Storage ---------- */
-const STORAGE_KEY = "dbgpt_sessions_v1";
-
-function readStorage(): { sessions: Session[]; activeId?: string } | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
-function writeStorage(payload: { sessions: Session[]; activeId?: string }) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-  } catch {
-    // ignore
-  }
-}
-
-/** ---------- Formatting ---------- */
-function formatTime(ts: number) {
-  try {
-    return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  } catch {
-    return "";
-  }
-}
-
-function formatDay(ts: number) {
-  try {
-    return new Date(ts).toLocaleDateString([], { month: "short", day: "numeric" });
-  } catch {
-    return "";
-  }
-}
-
-/** ---------- Initial Session Seed (no network) ---------- */
+/** ---------------- Seed data (deterministic: NO Date/crypto) ---------------- */
 function seedSessionStatic(): Session {
-  const now = Date.now();
   return {
-    id: "seed",
-    title: "New session",
-    createdAt: now - 3 * 60_000,
-    updatedAt: now - 1 * 60_000,
+    id: uid("sess"),
+    title: "Session: Today",
+    updatedAt: 0,
     messages: [
       {
-        id: "sys_seed",
+        id: uid("sys"),
         role: "system",
-        content:
-          "Private coaching session. Keep answers practical, athlete-friendly, and grounded in Presence, Patience, Perspective, Poise, Perseverance.",
-        createdAt: now - 3 * 60_000,
+        content: "Private coaching session. Keep answers practical and athlete-friendly.",
+        createdAt: 0,
       },
       {
-        id: "a_seed",
+        id: uid("a"),
         role: "assistant",
-        content:
-          "Welcome. Tell me what moment you’re in right now (training, competition, work, or recovery) and what you want to feel instead.",
-        createdAt: now - 2 * 60_000,
-      },
-      {
-        id: "u_seed",
-        role: "user",
-        content: "I get anxious before I perform and my mind races.",
-        createdAt: now - 90_000,
-      },
-      {
-        id: "a_seed2",
-        role: "assistant",
-        content:
-          "Got it. Here’s a 90-second reset you can run before you start:\n\n- **Presence:** exhale long (4–6 seconds) × 3. Feel your feet.\n- **Patience:** give yourself permission to be a little nervous.\n- **Perspective:** “This is energy, not danger.”\n- **Poise:** pick one simple cue word (e.g., “smooth”).\n- **Perseverance:** commit to the next rep only.\n\n**Next step:** Tell me your sport (or activity) and what triggers the anxiety most.",
-        createdAt: now - 60_000,
-        meta: { label: "Reset", tone: "steady" },
+        content: "What’s the situation you want to handle better — and when does it show up?",
+        createdAt: 0,
+        meta: { label: "Start", tone: "steady" },
       },
     ],
   };
 }
 
-/** ---------- Assistant Blocks ---------- */
-type AssistantBlock =
-  | { kind: "p"; text: string }
-  | { kind: "ul"; items: string[] }
-  | { kind: "ol"; items: string[] }
-  | { kind: "h2"; text: string };
+/** ---------------- API seam (LIVE ONLY) ----------------
+ * - Streaming enabled (client reads streamed text chunks)
+ * - Cost + usage protection is enforced server-side in /api/chat (no client changes needed)
+ */
+async function callApiChatStreaming(payload: {
+  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
+  onToken: (token: string) => void;
+}) {
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    // IMPORTANT: tell your /api/chat to stream
+    body: JSON.stringify({ messages: payload.messages, stream: true }),
+  });
 
-function parseAssistantBlocks(text: string): AssistantBlock[] {
-  const lines = (text || "").split("\n").map((l) => l.trim());
-  const blocks: AssistantBlock[] = [];
+  if (!res.ok) {
+    const text = await safeReadText(res);
+    throw new Error(text || `Request failed (${res.status})`);
+  }
+
+  if (!res.body) {
+    throw new Error("No response body (stream unavailable).");
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+    const chunk = decoder.decode(value, { stream: true });
+    if (chunk) payload.onToken(chunk);
+  }
+}
+
+async function safeReadText(res: Response) {
+  try {
+    return await res.text();
+  } catch {
+    return "";
+  }
+}
+
+/** ---------------- Assistant block rendering ---------------- */
+type RenderBlock =
+  | { kind: "h"; text: string }
+  | { kind: "p"; text: string }
+  | { kind: "quote"; text: string }
+  | { kind: "ul"; items: string[] }
+  | { kind: "ol"; items: string[] };
+
+function parseAssistantBlocks(text: string): RenderBlock[] {
+  const lines = text.split("\n").map((l) => l.trimEnd());
+  const blocks: RenderBlock[] = [];
 
   let ul: string[] = [];
   let ol: string[] = [];
+
   const flushLists = () => {
     if (ul.length) {
       blocks.push({ kind: "ul", items: ul });
@@ -199,30 +279,33 @@ function parseAssistantBlocks(text: string): AssistantBlock[] {
     }
   };
 
-  for (const line of lines) {
+  for (const raw of lines) {
+    const line = raw.trim();
     if (!line) {
       flushLists();
       continue;
     }
 
-    // Heading
-    if (/^#{2}\s+/.test(line)) {
+    if (line.startsWith("## ")) {
       flushLists();
-      blocks.push({ kind: "h2", text: line.replace(/^#{2}\s+/, "") });
+      blocks.push({ kind: "h", text: line.replace(/^##\s+/, "") });
       continue;
     }
 
-    // UL
-    if (/^[-•]\s+/.test(line)) {
-      ol = [];
-      ul.push(line.replace(/^[-•]\s+/, ""));
+    if (line.startsWith("> ")) {
+      flushLists();
+      blocks.push({ kind: "quote", text: line.replace(/^>\s+/, "") });
       continue;
     }
 
-    // OL
-    if (/^\d+\.\s+/.test(line)) {
-      ul = [];
-      ol.push(line.replace(/^\d+\.\s+/, ""));
+    const olMatch = line.match(/^\d+(\)|\.)\s+(.*)$/);
+    if (olMatch) {
+      ol.push(olMatch[2]);
+      continue;
+    }
+
+    if (line.startsWith("- ")) {
+      ul.push(line.replace(/^- /, ""));
       continue;
     }
 
@@ -232,66 +315,6 @@ function parseAssistantBlocks(text: string): AssistantBlock[] {
 
   flushLists();
   return blocks;
-}
-
-function titleCase(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function deriveMantraFromText(text: string): string {
-  const t = (text || "").trim();
-  if (!t) return "Slow is smooth. Smooth is fast.";
-
-  const nextStepLine =
-    t
-      .split("\n")
-      .map((l) => l.trim())
-      .find((l) => /^next step[:\-]/i.test(l)) ?? "";
-
-  if (nextStepLine) {
-    return nextStepLine.replace(/^next step[:\-]\s*/i, "").replace(/\.$/, "");
-  }
-
-  const first = t.split(/(?<=[.!?])\s+/)[0]?.trim() ?? "";
-  const cleaned = first.replace(/^##\s+/, "").replace(/\.$/, "");
-  if (cleaned.length >= 8 && cleaned.length <= 80) return cleaned;
-
-  return "Slow is smooth. Smooth is fast.";
-}
-
-function mapTagToRoutine(tag: string): string {
-  const t = tag.toLowerCase();
-  if (t.includes("reset")) return "Reset";
-  if (t.includes("clutch")) return "Clutch";
-  if (t.includes("review")) return "Post-game review";
-  return titleCase(tag);
-}
-
-function deriveSessionNotesFromAssistant(text: string): string[] {
-  const blocks = parseAssistantBlocks(text || "");
-  const notes: string[] = [];
-
-  // Prefer list items first
-  for (const b of blocks) {
-    if (b.kind === "ul" || b.kind === "ol") {
-      for (const it of b.items) {
-        const clean = it.trim();
-        if (clean) notes.push(clean);
-        if (notes.length >= 3) return notes;
-      }
-    }
-  }
-
-  // Fallback: take first 2-3 short paragraphs
-  for (const b of blocks) {
-    if (b.kind === "p") {
-      const clean = b.text.trim().replace(/\.$/, "");
-      if (clean.length >= 10 && clean.length <= 140) notes.push(clean);
-      if (notes.length >= 3) return notes;
-    }
-  }
-
-  return notes.slice(0, 3);
 }
 
 function InlineMarkdown({ text }: { text: string }) {
@@ -311,95 +334,38 @@ function InlineMarkdown({ text }: { text: string }) {
 
   return (
     <>
-      {parts.map((p, idx) =>
+      {parts.map((p, i) =>
         p.bold ? (
-          <strong key={idx} className="font-semibold text-white">
+          <strong key={i} className="font-semibold text-slate-100">
             {p.t}
           </strong>
         ) : (
-          <span key={idx}>{p.t}</span>
+          <span key={i}>{p.t}</span>
         )
       )}
     </>
   );
 }
 
-function AssistantMessage({ msg }: { msg: Message }) {
-  const blocks = parseAssistantBlocks(msg.content);
-
-  const tone = msg.meta?.tone ?? "steady";
-  const toneClasses =
-    tone === "celebrate"
-      ? "border-emerald-500/20 bg-emerald-500/5"
-      : tone === "reframe"
-      ? "border-indigo-500/20 bg-indigo-500/5"
-      : "border-white/10 bg-white/[0.02]";
-
-  return (
-    <div className={`rounded-2xl border p-4 ${toneClasses}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="text-[11px] font-semibold text-slate-300">Coach</div>
-        {msg.meta?.label ? (
-          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-            {msg.meta.label}
-          </span>
-        ) : null}
-      </div>
-
-      <div className="mt-3 space-y-3 text-[14px] leading-7 text-slate-100">
-        {blocks.map((b, idx) => {
-          if (b.kind === "h2") {
-            return (
-              <h3 key={idx} className="text-[13px] font-semibold text-white">
-                {b.text}
-              </h3>
-            );
-          }
-          if (b.kind === "ul") {
-            return (
-              <ul key={idx} className="list-disc pl-5 space-y-2 text-slate-100">
-                {b.items.map((it, j) => (
-                  <li key={j}>
-                    <InlineMarkdown text={it} />
-                  </li>
-                ))}
-              </ul>
-            );
-          }
-          if (b.kind === "ol") {
-            return (
-              <ol key={idx} className="list-decimal pl-5 space-y-2 text-slate-100">
-                {b.items.map((it, j) => (
-                  <li key={j}>
-                    <InlineMarkdown text={it} />
-                  </li>
-                ))}
-              </ol>
-            );
-          }
-          return (
-            <p key={idx} className="text-slate-100">
-              <InlineMarkdown text={b.text} />
-            </p>
-          );
-        })}
-      </div>
-
-      <div className="mt-4 flex items-center justify-between text-[11px] text-slate-400">
-        <span>{formatTime(msg.createdAt)}</span>
-      </div>
-    </div>
-  );
+/** ---------------- localStorage helpers ---------------- */
+function readStorage(): { sessions: Session[]; activeId: string } | null {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { sessions?: Session[]; activeId?: string };
+    if (!parsed.sessions?.length || !parsed.activeId) return null;
+    return { sessions: parsed.sessions, activeId: parsed.activeId };
+  } catch {
+    return null;
+  }
 }
 
-function UserMessage({ msg }: { msg: Message }) {
-  return (
-    <div className="ml-auto max-w-[90%] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-[14px] leading-7 text-slate-100">
-      <div className="text-[11px] font-semibold text-slate-300">You</div>
-      <div className="mt-2 whitespace-pre-wrap">{msg.content}</div>
-      <div className="mt-2 text-right text-[11px] text-slate-500">{formatTime(msg.createdAt)}</div>
-    </div>
-  );
+function writeStorage(data: { sessions: Session[]; activeId: string }) {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch {
+    // ignore
+  }
 }
 
 /** ---------------- Page ---------------- */
@@ -415,65 +381,110 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
 
-  const [activeRoutine, setActiveRoutine] = useState<string>("—");
-  const [mantra, setMantra] = useState<string>("Slow is smooth. Smooth is fast.");
-  const [sessionNotes, setSessionNotes] = useState<string[]>([]);
-
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const composingRef = useRef(false);
 
-  // Hydrate from localStorage on mount
-  useEffect(() => {
-    const stored = readStorage();
-    if (!stored?.sessions?.length) return;
+  // Track whether the user is actively scrolling; pause auto-scroll if so
+  const userScrollRef = useRef<{ active: boolean; t?: number }>({ active: false });
 
-    // Sanitize minimal
-    const safeSessions = stored.sessions.map((s) => ({
-      ...s,
-      messages: (s.messages || []).map((m) => ({
+  // Keep refs to each message container so we can scroll to the assistant reply start
+  const msgRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const [sessionMenuOpenId, setSessionMenuOpenId] = useState<string | null>(null);
+
+  // Hydrate from localStorage (client-only), otherwise convert seed to runtime ids/timestamps.
+  useEffect(() => {
+    const now = Date.now();
+
+    const fromStorage = readStorage();
+    if (fromStorage) {
+      setSessions(fromStorage.sessions);
+      setActiveId(fromStorage.activeId);
+      return;
+    }
+
+    const seeded = seedSessionStatic();
+    const hydrated: Session = {
+      ...seeded,
+      id: rid("sess"),
+      updatedAt: now - 2 * 60_000,
+      messages: seeded.messages.map((m, idx) => ({
         ...m,
-        id: m.id || rid(m.role),
-        createdAt: m.createdAt || Date.now(),
+        id: rid(m.role === "assistant" ? "a" : m.role === "user" ? "u" : "sys"),
+        createdAt: now - (10 - idx) * 60_000,
       })),
-    }));
-    setSessions(safeSessions);
-    setActiveId(stored.activeId || safeSessions[0].id);
+    };
+
+    setSessions([hydrated]);
+    setActiveId(hydrated.id);
+    writeStorage({ sessions: [hydrated], activeId: hydrated.id });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Persist on changes
+  // Persist changes (debounced)
   useEffect(() => {
-    writeStorage({ sessions, activeId });
+    if (activeId.includes("_static_")) return;
+
+    const t = window.setTimeout(() => {
+      writeStorage({ sessions, activeId });
+    }, 150);
+
+    return () => window.clearTimeout(t);
   }, [sessions, activeId]);
 
-  // Auto-scroll to bottom when messages change
+  // Close session menu on outside click / escape
   useEffect(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
-  }, [activeId, sessions]);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSessionMenuOpenId(null);
+    };
+    const onClick = () => setSessionMenuOpenId(null);
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("click", onClick);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("click", onClick);
+    };
+  }, []);
 
   const active = useMemo(() => sessions.find((s) => s.id === activeId) ?? sessions[0], [sessions, activeId]);
 
-  useEffect(() => {
-    if (!active) return;
+  function markUserScrolling() {
+    userScrollRef.current.active = true;
+    if (userScrollRef.current.t) window.clearTimeout(userScrollRef.current.t);
+    userScrollRef.current.t = window.setTimeout(() => {
+      userScrollRef.current.active = false;
+    }, 1200);
+  }
 
-    const lastAssistant = [...active.messages]
-      .reverse()
-      .find((m) => m.role === "assistant" && (m.content || "").trim().length > 0);
+  function scrollToAssistantStart(messageId: string) {
+    const scroller = scrollerRef.current;
+    const el = msgRefs.current[messageId];
+    if (!scroller || !el) return;
 
-    if (!lastAssistant) return;
+    // If user is actively scrolling, don't interfere
+    if (userScrollRef.current.active) return;
 
-    setMantra(deriveMantraFromText(lastAssistant.content));
-    setSessionNotes(deriveSessionNotesFromAssistant(lastAssistant.content));
-  }, [activeId, active?.messages]);
+    // Only scroll if the message start is below/above the visible viewport significantly
+    const box = scroller.getBoundingClientRect();
+    const mbox = el.getBoundingClientRect();
 
-  // Create a new session
-  function createSession() {
+    const padding = 12;
+    const visibleTop = box.top + padding;
+    const visibleBottom = box.bottom - padding;
+
+    const tooLow = mbox.top > visibleBottom - 24;
+    const tooHigh = mbox.top < visibleTop + 24;
+
+    if (tooLow || tooHigh) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
+  function newSession() {
     const now = Date.now();
     const s: Session = {
       id: rid("sess"),
       title: "New session",
-      createdAt: now,
       updatedAt: now,
       messages: [
         {
@@ -485,9 +496,8 @@ export default function ChatPage() {
         {
           id: rid("a"),
           role: "assistant",
-          content:
-            "Welcome. Tell me the moment you’re in right now (training, competition, work, or recovery) and what you want to feel instead.",
-          createdAt: now + 1,
+          content: "What’s the situation you want to handle better — and when does it show up?",
+          createdAt: now,
           meta: { label: "Start", tone: "steady" },
         },
       ],
@@ -496,13 +506,8 @@ export default function ChatPage() {
     setActiveId(s.id);
   }
 
-  function applyQuick(prompt: string, tag?: string) {
+  function applyQuick(prompt: string) {
     setInput(prompt);
-    if (tag) setActiveRoutine(mapTagToRoutine(tag));
-    requestAnimationFrame(() => {
-      const el = document.querySelector("textarea");
-      (el as HTMLTextAreaElement | null)?.focus?.();
-    });
   }
 
   function resetActive() {
@@ -524,443 +529,611 @@ export default function ChatPage() {
                 {
                   id: rid("a"),
                   role: "assistant",
-                  content:
-                    "Reset complete. Tell me what moment you’re in right now and what you want to feel instead.",
-                  createdAt: now + 1,
-                  meta: { label: "Reset", tone: "steady" },
+                  content: "What’s the situation you want to handle better — and when does it show up?",
+                  createdAt: now,
+                  meta: { label: "Start", tone: "steady" },
                 },
               ],
             }
           : s
       )
     );
+    setIsTyping(false);
+    setInput("");
   }
 
-  async function sendMessage() {
-    const t = input.trim();
-    if (!t || isTyping || !active) return;
+  function deleteSession(sessionId: string) {
+    setSessions((prev) => {
+      const next = prev.filter((s) => s.id !== sessionId);
+      if (!next.length) {
+        // always keep at least one session
+        const s = {
+          id: rid("sess"),
+          title: "New session",
+          updatedAt: Date.now(),
+          messages: [
+            {
+              id: rid("sys"),
+              role: "system" as const,
+              content: "Private coaching session. Keep answers practical and athlete-friendly.",
+              createdAt: Date.now(),
+            },
+            {
+              id: rid("a"),
+              role: "assistant" as const,
+              content: "What’s the situation you want to handle better — and when does it show up?",
+              createdAt: Date.now(),
+              meta: { label: "Start", tone: "steady" as const },
+            },
+          ],
+        };
+        setActiveId(s.id);
+        return [s];
+      }
 
-    composingRef.current = true;
+      // if deleting active, switch to newest remaining
+      if (activeId === sessionId) setActiveId(next[0].id);
+      return next;
+    });
+    setSessionMenuOpenId(null);
+  }
 
-    const now = Date.now();
-    const userMsg: Message = { id: rid("u"), role: "user", content: t, createdAt: now };
+  function buildApiPayloadMessages(session: Session) {
+    const all = session.messages.map((m) => ({ role: m.role, content: m.content }));
+    const system = all.find((m) => m.role === "system");
+    const rest = all.filter((m) => m.role !== "system").slice(-20);
+    return [...(system ? [system] : []), ...rest] as Array<{
+      role: "system" | "user" | "assistant";
+      content: string;
+    }>;
+  }
+
+  async function send() {
+    if (isTyping) return;
+
+    const text = input.trim();
+    if (!text || !active) return;
 
     setInput("");
-    setIsTyping(true);
 
-    // optimistic update
+    const now = Date.now();
+    const userMsg: Message = { id: rid("u"), role: "user", content: text, createdAt: now };
+
+    // Create the assistant placeholder message immediately (for streaming)
+    const assistantId = rid("a");
+    const assistantMsg: Message = {
+      id: assistantId,
+      role: "assistant",
+      content: "",
+      createdAt: Date.now(),
+      meta: { label: "Coach", tone: detectTone(text) },
+    };
+
+    // Commit user message + placeholder
     setSessions((prev) =>
       prev.map((s) =>
         s.id === active.id
           ? {
               ...s,
               updatedAt: now,
-              messages: [...s.messages, userMsg],
+              messages: [...s.messages, userMsg, assistantMsg],
+              title: s.title === "New session" ? "Session: Training" : s.title,
             }
           : s
       )
     );
 
+    setIsTyping(true);
+
+    // Subtle scroll to the assistant start soon after it appears
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => scrollToAssistantStart(assistantId));
+    });
+
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [...active.messages, userMsg].map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-        }),
+      const payloadMessages = buildApiPayloadMessages({ ...active, messages: [...active.messages, userMsg] });
+
+      let didFirstTokenScroll = false;
+
+      await callApiChatStreaming({
+        messages: payloadMessages,
+        onToken: (token) => {
+          setSessions((prev) =>
+            prev.map((s) =>
+              s.id === active.id
+                ? {
+                    ...s,
+                    updatedAt: Date.now(),
+                    messages: s.messages.map((m) => (m.id === assistantId ? { ...m, content: m.content + token } : m)),
+                  }
+                : s
+            )
+          );
+
+          // Scroll to assistant start once (after first token) for a clean “reply begins here” feel
+          if (!didFirstTokenScroll) {
+            didFirstTokenScroll = true;
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => scrollToAssistantStart(assistantId));
+            });
+          }
+        },
       });
-
-      if (!res.ok) throw new Error("Failed to fetch response");
-      const data = await res.json();
-      const assistantText = (data?.content || data?.message || "").toString().trim();
-
-      const assistantMsg: Message = {
-        id: rid("a"),
-        role: "assistant",
-        content: assistantText || "I’m here. Tell me what you want to improve right now.",
-        createdAt: Date.now(),
-      };
-
+    } catch {
       setSessions((prev) =>
         prev.map((s) =>
           s.id === active.id
             ? {
                 ...s,
                 updatedAt: Date.now(),
-                messages: [...s.messages, assistantMsg],
+                messages: s.messages.map((m) =>
+                  m.id === assistantId
+                    ? {
+                        ...m,
+                        content:
+                          "I couldn’t reach the server just now. Try again in a moment — and if it keeps happening, we’ll check the API route and environment variables.",
+                        meta: { label: "Error", tone: "steady" },
+                      }
+                    : m
+                ),
               }
             : s
         )
       );
-    } catch (e) {
-      const errMsg: Message = {
-        id: rid("a_err"),
-        role: "assistant",
-        content:
-          "I hit a connection issue. Try again in a moment. If it keeps happening, refresh the page.",
-        createdAt: Date.now(),
-        meta: { label: "Error", tone: "reframe" },
-      };
 
-      setSessions((prev) =>
-        prev.map((s) =>
-          s.id === active.id
-            ? { ...s, updatedAt: Date.now(), messages: [...s.messages, errMsg] }
-            : s
-        )
-      );
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => scrollToAssistantStart(assistantId));
+      });
     } finally {
       setIsTyping(false);
-      composingRef.current = false;
-      requestAnimationFrame(() => {
-        const el = scrollerRef.current;
-        if (el) el.scrollTop = el.scrollHeight;
-      });
     }
   }
-
-  function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  }
-
-  const groupedSessions = useMemo(() => {
-    const byDay: Record<string, Session[]> = {};
-    for (const s of sessions) {
-      const key = formatDay(s.updatedAt);
-      byDay[key] = byDay[key] || [];
-      byDay[key].push(s);
-    }
-    return Object.entries(byDay).sort((a, b) => {
-      const ta = new Date(a[0]).getTime();
-      const tb = new Date(b[0]).getTime();
-      return tb - ta;
-    });
-  }, [sessions]);
 
   return (
-    <div className="relative min-h-screen bg-black text-white">
-      {/* background */}
-      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+    <div className="min-h-screen bg-[#0b0f19] text-slate-100 overflow-hidden">
+      {/* Fixed interactive gradient background — never “cuts off” */}
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-[#0b0f19]" />
+        <div
+          className="absolute inset-0 opacity-80"
+          style={{
+            background:
+              "radial-gradient(900px circle at var(--mx) var(--my), rgba(90,79,246,0.18), transparent 55%)",
+          }}
+        />
         <div
           className="absolute inset-0 opacity-70"
           style={{
             background:
-              "radial-gradient(900px 500px at var(--mx, 50%) var(--my, 30%), rgba(99,102,241,0.20), transparent 60%), radial-gradient(900px 500px at calc(var(--mx, 50%) + 10%) calc(var(--my, 30%) + 25%), rgba(16,185,129,0.14), transparent 60%), radial-gradient(900px 500px at calc(var(--mx, 50%) - 15%) calc(var(--my, 30%) + 10%), rgba(245,158,11,0.10), transparent 60%)",
+              "radial-gradient(820px circle at calc(var(--mx) + 18%) calc(var(--my) + 14%), rgba(58,166,255,0.14), transparent 58%)",
           }}
         />
-        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.6),rgba(0,0,0,0.95))]" />
+        <div
+          className="absolute inset-0 opacity-60"
+          style={{
+            background:
+              "radial-gradient(760px circle at calc(var(--mx) - 18%) calc(var(--my) + 44%), rgba(244,197,66,0.10), transparent 60%)",
+          }}
+        />
+        <div className="absolute inset-0 opacity-40 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent_30%,rgba(255,255,255,0.03))]" />
+        <div className="absolute inset-0 opacity-[0.08] bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.65)_1px,transparent_0)] [background-size:24px_24px]" />
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-6 md:px-6">
-        {/* top bar */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen((v) => !v)}
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[12px] text-slate-200 hover:bg-white/10"
-            >
-              {sidebarOpen ? "Hide" : "Show"} sessions
-            </button>
-            <div>
-              <div className="text-[13px] font-semibold text-white">Dr. Brett GPT</div>
-              <div className="text-[11px] text-slate-400">Private coaching session</div>
+      <div className="relative mx-auto flex min-h-screen max-w-[1500px]">
+        {/* Sidebar */}
+        <aside
+          className={[
+            "hidden lg:flex h-screen w-[320px] shrink-0 flex-col border-r border-white/10 bg-black/10 backdrop-blur-xl",
+            sidebarOpen ? "" : "w-0 overflow-hidden opacity-0",
+          ].join(" ")}
+        >
+          <div className="flex items-center justify-between px-5 py-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-[11px] font-semibold ring-1 ring-white/10">
+                BG
+              </div>
+              <div className="leading-tight">
+                <div className="text-sm font-semibold tracking-tight">{BRAND.name}</div>
+                <div className="text-[11px] text-slate-400">{BRAND.subtitle}</div>
+              </div>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2">
             <button
-              onClick={createSession}
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[12px] text-slate-200 hover:bg-white/10"
+              onClick={() => setSidebarOpen(false)}
+              className="rounded-lg px-2 py-1 text-[11px] text-slate-300 hover:bg-white/5 hover:text-slate-100"
             >
-              New session
-            </button>
-            <button
-              onClick={resetActive}
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[12px] text-slate-200 hover:bg-white/10"
-            >
-              Reset
+              Collapse
             </button>
           </div>
-        </div>
 
-        <main className="mt-6 grid gap-4 lg:grid-cols-[320px_1fr]">
-          {/* sidebar */}
-          <aside
-            className={[
-              "rounded-2xl border border-white/10 bg-black/10 backdrop-blur-xl",
-              sidebarOpen ? "block" : "hidden lg:block",
-            ].join(" ")}
-          >
-            <div className="border-b border-white/10 p-4">
-              <div className="text-[12px] font-semibold text-white">Sessions</div>
-              <div className="mt-1 text-[11px] text-slate-400">
-                Your conversations stay on this device.
-              </div>
-            </div>
+          <div className="flex min-h-0 flex-1 flex-col px-5">
+            <button
+              onClick={newSession}
+              className="w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-left text-[12px] font-semibold hover:bg-white/15"
+            >
+              + New session
+            </button>
 
-            <div className="max-h-[calc(100vh-220px)] overflow-auto p-3">
-              {groupedSessions.map(([day, ss]) => (
-                <div key={day} className="mb-4">
-                  <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                    {day}
-                  </div>
-                  <div className="space-y-2">
-                    {ss.map((s) => {
-                      const isActive = s.id === activeId;
-                      const lastUser = [...s.messages].reverse().find((m) => m.role === "user")?.content;
-                      return (
-                        <button
-                          key={s.id}
-                          onClick={() => setActiveId(s.id)}
-                          className={[
-                            "w-full rounded-xl border px-3 py-3 text-left transition",
-                            isActive
-                              ? "border-white/20 bg-white/10"
-                              : "border-white/10 bg-white/5 hover:bg-white/10",
-                          ].join(" ")}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="text-[12px] font-semibold text-white">{s.title || "Session"}</div>
-                            <div className="text-[10px] text-slate-500">{formatTime(s.updatedAt)}</div>
-                          </div>
-                          <div className="mt-1 line-clamp-2 text-[11px] text-slate-400">
-                            {lastUser || "New conversation"}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* quick actions */}
-            <div className="border-t border-white/10 p-4">
-              <div className="text-[11px] font-semibold text-slate-300">Quick actions</div>
-              <div className="mt-3 grid grid-cols-1 gap-2">
-                {QUICK_ACTIONS.slice(0, 3).map((a) => (
-                  <button
-                    key={a.k}
-                    onClick={() => applyQuick(a.prompt, a.tag)}
-                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left text-[12px] text-slate-200 hover:bg-white/10"
-                    title={a.prompt}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold">{a.title}</span>
-                      <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-                        {a.tag}
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-4 rounded-2xl border border-white/10 bg-black/15 p-4">
-                <div className="text-[11px] font-semibold text-slate-300">Safety</div>
-                <div className="mt-2 text-[11px] leading-5 text-slate-400">
-                  Coaching only — not medical care. If you’re in crisis, seek immediate local professional help.
-                  <Link href="/legal" className="ml-1 underline underline-offset-4 hover:text-white">
-                    Legal disclaimer
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </aside>
-
-          {/* main chat */}
-          <section className="grid gap-4 lg:grid-cols-[1fr_360px]">
-            <div className="rounded-2xl border border-white/10 bg-black/10 backdrop-blur-xl">
-              <div className="border-b border-white/10 px-5 py-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-[12px] font-semibold text-white">{active?.title || "Session"}</div>
-                    <div className="mt-1 text-[11px] text-slate-400">
-                      Grounded in Presence · Patience · Perspective · Poise · Perseverance
-                    </div>
-                  </div>
-
-                  <div className="hidden md:flex items-center gap-2">
-                    {QUICK_ACTIONS.slice(0, 3).map((a) => (
-                      <button
-                        key={a.k}
-                        onClick={() => applyQuick(a.prompt, a.tag)}
-                        className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[12px] text-slate-200 hover:bg-white/10"
-                        title={a.prompt}
-                      >
-                        {a.tag}
+            <div className="mt-4 min-h-0 flex-1 overflow-auto pr-1">
+              <div>
+                <div className="mb-2 text-[11px] font-semibold text-slate-300">Sessions</div>
+                <div className="space-y-2">
+                  {sessions.map((s) => (
+                    <div
+                      key={s.id}
+                      className={[
+                        "relative w-full rounded-xl border border-white/10 px-3 py-2 hover:bg-white/5",
+                        s.id === activeId ? "bg-white/10" : "bg-black/15",
+                      ].join(" ")}
+                    >
+                      <button onClick={() => setActiveId(s.id)} className="block w-full text-left pr-8">
+                        <div className="text-[12px] font-semibold text-slate-100 line-clamp-1">{s.title}</div>
+                        <div className="mt-0.5 text-[10px] text-slate-400">
+                          Updated {s.updatedAt ? formatTime(s.updatedAt) : "—"}
+                        </div>
                       </button>
-                    ))}
-                  </div>
+
+                      {/* three-dots menu */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSessionMenuOpenId((prev) => (prev === s.id ? null : s.id));
+                        }}
+                        className="absolute right-2 top-2 rounded-lg px-2 py-1 text-[12px] text-slate-300 hover:bg-white/5 hover:text-slate-100"
+                        aria-label="Session menu"
+                        title="Session options"
+                      >
+                        ⋯
+                      </button>
+
+                      {sessionMenuOpenId === s.id && (
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          className="absolute right-2 top-10 z-30 w-[160px] overflow-hidden rounded-xl border border-white/10 bg-[#0b0f19]/95 backdrop-blur-xl shadow-lg"
+                        >
+                          <button
+                            onClick={() => deleteSession(s.id)}
+                            className="w-full px-3 py-2 text-left text-[12px] text-slate-200 hover:bg-white/5"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
 
+              <div className="mt-6">
+                <div className="mb-2 text-[11px] font-semibold text-slate-300">Quick actions</div>
+                <div className="space-y-2">
+                  {QUICK_ACTIONS.map((a) => (
+                    <button
+                      key={a.k}
+                      onClick={() => applyQuick(a.prompt)}
+                      className="w-full rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-left hover:bg-white/5"
+                      title={a.prompt}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="text-[12px] font-semibold text-slate-100">{a.title}</div>
+                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
+                          {a.tag}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-5 pb-5 pt-4">
+            <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
+              <div className="text-[11px] font-semibold text-slate-300">Safety</div>
+              <div className="mt-2 text-[11px] leading-5 text-slate-400">
+                Coaching only — not medical care. If you’re in crisis, seek immediate local professional help.{" "}
+                <Link href="/legal" className="underline underline-offset-4 hover:text-white">
+                  Legal disclaimer
+                  </Link>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main */}
+        <main className="relative z-10 flex min-h-screen flex-1 flex-col min-w-0">
+          {/* Top bar */}
+          <div className="sticky top-0 z-20 border-b border-white/10 bg-black/10 backdrop-blur-xl">
+            <div className="mx-auto flex max-w-[1200px] items-center justify-between px-4 py-3 md:px-6">
+              <div className="flex items-center gap-3">
+                {!sidebarOpen && (
+                  <button
+                    onClick={() => setSidebarOpen(true)}
+                    className="hidden lg:inline-flex rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-slate-200 hover:bg-white/10"
+                  >
+                    Sidebar
+                  </button>
+                )}
+                <div className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/90" />
+                  <span className="text-[11px] text-slate-300">
+                    {BRAND.name} <span className="text-slate-500">•</span>{" "}
+                    <span className="text-slate-400">{isTyping ? "Thinking…" : "Online"}</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={resetActive}
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] text-slate-100 hover:bg-white/10"
+                >
+                  Reset chat
+                </button>
+                <a
+                  href="/"
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] text-slate-100 hover:bg-white/10"
+                >
+                  Home
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Two-column: Chat (left) + Panels (right) */}
+          <div className="mx-auto flex w-full max-w-[1200px] flex-1 gap-6 px-4 py-6 md:px-6 min-h-0">
+            {/* Chat column */}
+            <section className="flex min-w-0 flex-1 flex-col min-h-0">
+              {/* Messages */}
               <div
                 ref={scrollerRef}
-                className="max-h-[calc(100vh-280px)] overflow-auto px-5 py-5 space-y-4"
+                onScroll={markUserScrolling}
+                onWheel={markUserScrolling}
+                onTouchMove={markUserScrolling}
+                className="min-h-0 flex-1 overflow-auto rounded-2xl border border-white/10 bg-black/10 backdrop-blur-xl"
               >
-                {active?.messages.map((m) =>
-                  m.role === "assistant" ? (
-                    <AssistantMessage key={m.id} msg={m} />
-                  ) : m.role === "user" ? (
-                    <UserMessage key={m.id} msg={m} />
-                  ) : null
-                )}
+                <div className="space-y-4 p-4 md:p-5">
+                  {(active?.messages ?? [])
+                    .filter((m) => m.role !== "system")
+                    .map((m) => (
+                      <div
+                        key={m.id}
+                        ref={(el) => {
+                          msgRefs.current[m.id] = el;
+                        }}
+                      >
+                        <ChatRow message={m} />
+                      </div>
+                    ))}
 
-                {isTyping ? (
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
-                    <div className="text-[11px] font-semibold text-slate-300">Coach</div>
-                    <div className="mt-3 text-[13px] text-slate-300">Thinking…</div>
-                  </div>
-                ) : null}
+                  {isTyping && (
+                    <div className="flex gap-3">
+                      <Avatar label="BG" />
+                      <div className="max-w-[82ch] rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+                        <div className="text-[11px] font-semibold text-slate-100">{BRAND.name}</div>
+                        <div className="mt-2 space-y-2">
+                          <div className="h-3 w-full rounded-full bg-white/10" />
+                          <div className="h-3 w-5/6 rounded-full bg-white/10" />
+                          <div className="h-3 w-2/3 rounded-full bg-white/10" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="border-t border-white/10 px-5 py-5">
-                <div className="flex items-end gap-3">
+              {/* Composer */}
+              <div className="mt-4 rounded-2xl border border-white/10 bg-black/10 p-3 backdrop-blur-xl">
+                <div className="flex items-end gap-2">
                   <textarea
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={onKeyDown}
+                    onCompositionStart={() => {
+                      composingRef.current = true;
+                    }}
+                    onCompositionEnd={() => {
+                      composingRef.current = false;
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey && !composingRef.current) {
+                        e.preventDefault();
+                        void send();
+                      }
+                    }}
                     rows={3}
-                    className="min-h-[52px] w-full resize-none rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-[14px] leading-7 text-slate-100 placeholder:text-slate-500 outline-none focus:border-white/25"
-                    placeholder="Describe the moment. What’s happening, and what do you want to feel instead?"
+                    placeholder="Describe the moment. Where does it break: breathing, focus, confidence, or decision speed?"
+                    className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[14px] leading-6 text-slate-100 placeholder:text-slate-500 outline-none focus:border-white/20"
                   />
-
                   <button
-                    onClick={sendMessage}
+                    onClick={() => void send()}
                     disabled={!input.trim() || isTyping}
-                    className={[
-                      "rounded-2xl px-4 py-3 text-[13px] font-semibold transition",
-                      !input.trim() || isTyping
-                        ? "cursor-not-allowed border border-white/10 bg-white/5 text-slate-500"
-                        : "border border-white/15 bg-white/10 text-white hover:bg-white/15",
-                    ].join(" ")}
+                    className="h-[46px] shrink-0 rounded-xl border border-white/10 bg-white/10 px-4 text-[12px] font-semibold text-slate-100 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Send
                   </button>
                 </div>
 
-                <div className="mt-2 text-[11px] leading-5 text-slate-500">
-                  Tip: Press <span className="text-slate-300">Enter</span> to send,{" "}
-                  <span className="text-slate-300">Shift+Enter</span> for a new line.
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {QUICK_ACTIONS.map((a) => (
+                    <button
+                      key={a.k}
+                      onClick={() => applyQuick(a.prompt)}
+                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] text-slate-200 hover:bg-white/10"
+                    >
+                      {a.tag}
+                    </button>
+                  ))}
                 </div>
               </div>
-            </div>
+            </section>
 
             {/* Right panel — Performance Dashboard */}
-            <aside className="hidden w-[360px] shrink-0 lg:block">
-              <div className="sticky top-[84px] space-y-4">
-                {/* Focus / Mantra */}
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-                  <div className="flex items-center justify-between">
-                    <div className="text-[11px] font-semibold text-slate-300">Today’s focus</div>
-                    <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-                      Mantra
-                    </span>
-                  </div>
-                  <p className="mt-2 text-[13px] leading-6 text-slate-200">{mantra}</p>
-                  <p className="mt-2 text-[11px] leading-5 text-slate-400">
-                    Want a custom mantra? Use a quick action or describe the moment.
-                  </p>
-                </div>
+<aside className="hidden w-[360px] shrink-0 lg:block">
+  <div className="sticky top-[84px] space-y-4">
+    {/* Focus / Mantra */}
+    <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+      <div className="flex items-center justify-between">
+        <div className="text-[11px] font-semibold text-slate-300">Today’s focus</div>
+        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
+          Mantra
+        </span>
+      </div>
+      <p className="mt-2 text-[13px] leading-6 text-slate-200">
+        Slow is smooth. Smooth is fast.
+      </p>
+      <p className="mt-2 text-[11px] leading-5 text-slate-400">
+        Want a custom mantra? Use a quick action or describe the moment.
+      </p>
+    </div>
 
-                {/* Active routine */}
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-                  <div className="flex items-center justify-between">
-                    <div className="text-[11px] font-semibold text-slate-300">Active routine</div>
-                    <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-                      Live
-                    </span>
-                  </div>
-                  <p className="mt-2 text-[13px] leading-6 text-slate-200">{activeRoutine}</p>
-                  <p className="mt-2 text-[11px] leading-5 text-slate-400">
-                    Tap a quick action to set a routine, or describe the moment.
-                  </p>
-                </div>
+    {/* Mental Watchlist */}
+    <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+      <div className="text-[11px] font-semibold text-slate-300">Mental watchlist</div>
+      <div className="mt-3 space-y-2">
+        <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
+          <div className="text-[11px] font-semibold text-slate-200">Breath</div>
+          <div className="mt-1 text-[11px] leading-5 text-slate-400">One calm exhale before action.</div>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
+          <div className="text-[11px] font-semibold text-slate-200">Cue</div>
+          <div className="mt-1 text-[11px] leading-5 text-slate-400">One word that locks you in.</div>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
+          <div className="text-[11px] font-semibold text-slate-200">Next action</div>
+          <div className="mt-1 text-[11px] leading-5 text-slate-400">Only the next rep/play matters.</div>
+        </div>
+      </div>
+    </div>
 
-                {/* Mental Watchlist */}
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-                  <div className="text-[11px] font-semibold text-slate-300">Mental watchlist</div>
-                  <div className="mt-3 space-y-2">
-                    <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
-                      <div className="text-[11px] font-semibold text-slate-200">Breath</div>
-                      <div className="mt-1 text-[11px] leading-5 text-slate-400">
-                        One calm exhale before action.
-                      </div>
+    {/* Quick actions (duplicate, but dashboard-style) */}
+    <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+      <div className="text-[11px] font-semibold text-slate-300">Quick actions</div>
+      <div className="mt-3 grid grid-cols-1 gap-2">
+        {QUICK_ACTIONS.map((a) => (
+          <button
+            key={a.k}
+            onClick={() => applyQuick(a.prompt)}
+            className="rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-left hover:bg-white/5"
+            title={a.prompt}
+          >
+            <div className="flex items-center justify-between">
+              <div className="text-[12px] font-semibold text-slate-100">{a.title}</div>
+              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
+                {a.tag}
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+
+    {/* Safety (with link) */}
+    <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+      <div className="text-[11px] font-semibold text-slate-300">Safety</div>
+      <p className="mt-2 text-[12px] leading-6 text-slate-300">
+        Coaching only — not medical care. If you’re in crisis, seek immediate local professional help.{" "}
+        <Link href="/legal" className="underline underline-offset-4 hover:text-white">
+          Legal disclaimer
+        </Link>
+      </p>
+    </div>
+  </div>
+</aside>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+/** ---------------- UI bits ---------------- */
+function Avatar({ label }: { label: string }) {
+  return (
+    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-[11px] font-semibold ring-1 ring-white/10">
+      {label}
+    </div>
+  );
+}
+
+function ChatRow({ message }: { message: Message }) {
+  const isUser = message.role === "user";
+
+  const blocks = useMemo(() => {
+    if (isUser) return null;
+    return parseAssistantBlocks(message.content);
+  }, [isUser, message.content]);
+
+  return (
+    <div className="flex gap-3 justify-start">
+      <Avatar label={isUser ? "You" : "BG"} />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="text-[11px] font-semibold text-slate-100">{isUser ? "You" : BRAND.name}</div>
+            {!isUser && message.meta?.label && (
+              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-400">
+                {message.meta.label}
+              </span>
+            )}
+          </div>
+          <div className="text-[10px] text-slate-500">{message.createdAt ? formatTime(message.createdAt) : "—"}</div>
+        </div>
+
+        <div
+          className={[
+            "mt-2 max-w-[90ch] rounded-2xl border border-white/10 px-4 py-3 text-[14px] leading-7",
+            isUser ? "bg-white/5 text-slate-100" : "bg-black/20 text-slate-200",
+          ].join(" ")}
+        >
+          {isUser ? (
+            <div className="whitespace-pre-wrap">{message.content}</div>
+          ) : (
+            <div className="space-y-3">
+              {blocks?.map((b, idx) => {
+                if (b.kind === "h") {
+                  return (
+                    <div key={idx} className="text-[14px] font-semibold text-slate-100">
+                      {b.text}
                     </div>
-                    <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
-                      <div className="text-[11px] font-semibold text-slate-200">Cue</div>
-                      <div className="mt-1 text-[11px] leading-5 text-slate-400">
-                        One word that locks you in.
-                      </div>
+                  );
+                }
+                if (b.kind === "quote") {
+                  return (
+                    <div key={idx} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 italic text-slate-200">
+                      <InlineMarkdown text={b.text} />
                     </div>
-                    <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
-                      <div className="text-[11px] font-semibold text-slate-200">Next action</div>
-                      <div className="mt-1 text-[11px] leading-5 text-slate-400">
-                        Only the next rep/play matters.
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Session notes */}
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-                  <div className="text-[11px] font-semibold text-slate-300">Session notes</div>
-
-                  {sessionNotes.length ? (
-                    <ul className="mt-3 list-disc space-y-2 pl-5 text-[12px] leading-6 text-slate-200">
-                      {sessionNotes.map((n, idx) => (
-                        <li key={idx}>{n}</li>
+                  );
+                }
+                if (b.kind === "ul") {
+                  return (
+                    <ul key={idx} className="list-disc space-y-1 pl-5 text-slate-200">
+                      {b.items.map((it, i) => (
+                        <li key={i}>
+                          <InlineMarkdown text={it} />
+                        </li>
                       ))}
                     </ul>
-                  ) : (
-                    <p className="mt-2 text-[11px] leading-5 text-slate-400">
-                      Your key takeaways will appear here after the coach responds.
-                    </p>
-                  )}
-                </div>
-
-                {/* Quick actions (dashboard-style) */}
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-                  <div className="text-[11px] font-semibold text-slate-300">Quick actions</div>
-                  <div className="mt-3 grid grid-cols-1 gap-2">
-                    {QUICK_ACTIONS.map((a) => (
-                      <button
-                        key={a.k}
-                        onClick={() => applyQuick(a.prompt, a.tag)}
-                        className="rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-left hover:bg-white/5"
-                        title={a.prompt}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="text-[12px] font-semibold text-slate-100">{a.title}</div>
-                          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-                            {a.tag}
-                          </span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Safety (with link) */}
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-                  <div className="text-[11px] font-semibold text-slate-300">Safety</div>
-                  <p className="mt-2 text-[12px] leading-6 text-slate-300">
-                    Coaching only — not medical care. If you’re in crisis, seek immediate local professional help.{" "}
-                    <Link href="/legal" className="underline underline-offset-4 hover:text-white">
-                      Legal disclaimer
-                    </Link>
+                  );
+                }
+                if (b.kind === "ol") {
+                  return (
+                    <ol key={idx} className="list-decimal space-y-1 pl-5 text-slate-200">
+                      {b.items.map((it, i) => (
+                        <li key={i}>
+                          <InlineMarkdown text={it} />
+                        </li>
+                      ))}
+                    </ol>
+                  );
+                }
+                return (
+                  <p key={idx} className="whitespace-pre-wrap">
+                    <InlineMarkdown text={b.text} />
                   </p>
-                </div>
-              </div>
-            </aside>
-          </section>
-        </main>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

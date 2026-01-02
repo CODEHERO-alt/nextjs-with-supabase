@@ -829,7 +829,10 @@ export default function ChatPage() {
             <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
               <div className="text-[11px] font-semibold text-slate-300">Safety</div>
               <div className="mt-2 text-[11px] leading-5 text-slate-400">
-                Coaching only — not medical care. If you’re in crisis, seek immediate local professional help.
+                Coaching only — not medical care. If you’re in crisis, seek immediate local professional help.{" "}
+                <Link href="/legal" className="underline underline-offset-4 hover:text-white">
+                  Legal disclaimer
+                  </Link>
               </div>
             </div>
           </div>

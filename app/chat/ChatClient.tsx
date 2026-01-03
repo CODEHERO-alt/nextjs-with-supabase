@@ -317,6 +317,7 @@ function parseAssistantBlocks(text: string): RenderBlock[] {
   return blocks;
 }
 
+
 function titleCase(s: string) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
@@ -441,9 +442,22 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
 
+  const [thinkingPhase, setThinkingPhase] = useState(0);
+
   const [mantra, setMantra] = useState("Slow is smooth. Smooth is fast.");
   const [activeRoutine, setActiveRoutine] = useState<string>("—");
   const [sessionNotes, setSessionNotes] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!isTyping) {
+      setThinkingPhase(0);
+      return;
+    }
+    const id = window.setInterval(() => {
+      setThinkingPhase((p) => (p + 1) % THINKING_STEPS.length);
+    }, 700);
+    return () => window.clearInterval(id);
+  }, [isTyping]);
 
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const composingRef = useRef(false);
@@ -512,18 +526,19 @@ export default function ChatPage() {
 
   const active = useMemo(() => sessions.find((s) => s.id === activeId) ?? sessions[0], [sessions, activeId]);
 
-  useEffect(() => {
-    if (!active) return;
 
-    const lastAssistant = [...active.messages]
-      .reverse()
-      .find((m) => m.role === "assistant" && (m.content || "").trim());
+useEffect(() => {
+  if (!active) return;
 
-    if (!lastAssistant) return;
+  const lastAssistant = [...active.messages]
+    .reverse()
+    .find((m) => m.role === "assistant" && (m.content || "").trim());
 
-    setMantra(deriveMantraFromAssistant(lastAssistant.content));
-    setSessionNotes(deriveSessionNotes(lastAssistant.content));
-  }, [activeId, active?.messages]);
+  if (!lastAssistant) return;
+
+  setMantra(deriveMantraFromAssistant(lastAssistant.content));
+  setSessionNotes(deriveSessionNotes(lastAssistant.content));
+}, [activeId, active?.messages]);
 
   function markUserScrolling() {
     userScrollRef.current.active = true;
@@ -583,15 +598,8 @@ export default function ChatPage() {
     setActiveId(s.id);
   }
 
-  function applyQuick(prompt: string, tag?: string) {
+  function applyQuick(prompt: string) {
     setInput(prompt);
-    if (tag) setActiveRoutine(mapTagToRoutine(tag));
-
-    // focus composer (safe: runs on click only)
-    requestAnimationFrame(() => {
-      const el = document.querySelector("textarea") as HTMLTextAreaElement | null;
-      el?.focus?.();
-    });
   }
 
   function resetActive() {
@@ -774,7 +782,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0f19] text-slate-100 overflow-hidden">
+    <div className="h-screen bg-[#0b0f19] text-slate-100 overflow-hidden">
       {/* Fixed interactive gradient background — never “cuts off” */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute inset-0 bg-[#0b0f19]" />
@@ -803,7 +811,7 @@ export default function ChatPage() {
         <div className="absolute inset-0 opacity-[0.08] bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.65)_1px,transparent_0)] [background-size:24px_24px]" />
       </div>
 
-      <div className="relative mx-auto flex min-h-screen max-w-[1500px]">
+      <div className="relative mx-auto flex h-screen max-w-[1500px]">
         {/* Sidebar */}
         <aside
           className={[
@@ -917,14 +925,14 @@ export default function ChatPage() {
                 Coaching only — not medical care. If you’re in crisis, seek immediate local professional help.{" "}
                 <Link href="/legal" className="underline underline-offset-4 hover:text-white">
                   Legal disclaimer
-                </Link>
+                  </Link>
               </div>
             </div>
           </div>
         </aside>
 
         {/* Main */}
-        <main className="relative z-10 flex min-h-screen flex-1 flex-col min-w-0">
+        <main className="relative z-10 flex h-screen flex-1 flex-col min-w-0">
           {/* Top bar */}
           <div className="sticky top-0 z-20 border-b border-white/10 bg-black/10 backdrop-blur-xl">
             <div className="mx-auto flex max-w-[1200px] items-center justify-between px-4 py-3 md:px-6">
@@ -973,7 +981,8 @@ export default function ChatPage() {
                 onScroll={markUserScrolling}
                 onWheel={markUserScrolling}
                 onTouchMove={markUserScrolling}
-                className="min-h-0 flex-1 overflow-auto rounded-2xl border border-white/10 bg-black/10 backdrop-blur-xl"
+                style={{ scrollbarGutter: "stable" }}
+                className="min-h-0 flex-1 overflow-y-scroll overflow-x-hidden rounded-2xl border border-white/10 bg-black/10 backdrop-blur-xl"
               >
                 <div className="space-y-4 p-4 md:p-5">
                   {(active?.messages ?? [])
@@ -994,10 +1003,19 @@ export default function ChatPage() {
                       <Avatar label="BG" />
                       <div className="max-w-[82ch] rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
                         <div className="text-[11px] font-semibold text-slate-100">{BRAND.name}</div>
-                        <div className="mt-2 space-y-2">
-                          <div className="h-3 w-full rounded-full bg-white/10" />
-                          <div className="h-3 w-5/6 rounded-full bg-white/10" />
-                          <div className="h-3 w-2/3 rounded-full bg-white/10" />
+
+                        <div className="mt-2">
+                          <div className="text-[12px] text-slate-200 animate-pulse">
+                            {THINKING_STEPS[thinkingPhase]?.title}…
+                          </div>
+
+                          <div className="mt-2 space-y-1 text-[11px] leading-5 text-slate-400">
+                            {THINKING_STEPS[thinkingPhase]?.lines?.map((l, i) => (
+                              <div key={i} className="animate-pulse">
+                                {l}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1051,106 +1069,90 @@ export default function ChatPage() {
             </section>
 
             {/* Right panel — Performance Dashboard */}
-            <aside className="hidden w-[360px] shrink-0 lg:block">
-              <div className="sticky top-[84px] space-y-4">
-                {/* Focus / Mantra */}
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-                  <div className="flex items-center justify-between">
-                    <div className="text-[11px] font-semibold text-slate-300">Today’s focus</div>
-                    <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-                      Mantra
-                    </span>
-                  </div>
-                  <p className="mt-2 text-[13px] leading-6 text-slate-200">{mantra}</p>
-                  <p className="mt-2 text-[11px] leading-5 text-slate-400">
-                    Want a custom mantra? Use a quick action or describe the moment.
-                  </p>
-                </div>
+<aside className="hidden w-[360px] shrink-0 lg:block">
+  <div className="sticky top-[84px] space-y-4">
+    {/* Focus / Mantra */}
+    <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+      <div className="flex items-center justify-between">
+        <div className="text-[11px] font-semibold text-slate-300">Today’s focus</div>
+        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
+          Mantra
+        </span>
+      </div>
+      <p className="mt-2 text-[13px] leading-6 text-slate-200">{mantra}</p>
+      <p className="mt-2 text-[11px] leading-5 text-slate-400">
+        Want a custom mantra? Use a quick action or describe the moment.
+      </p>
+    </div>
 
-                {/* Active routine */}
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-                  <div className="flex items-center justify-between">
-                    <div className="text-[11px] font-semibold text-slate-300">Active routine</div>
-                    <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-                      Live
-                    </span>
-                  </div>
-                  <p className="mt-2 text-[13px] leading-6 text-slate-200">{activeRoutine}</p>
-                  <p className="mt-2 text-[11px] leading-5 text-slate-400">
-                    Tap a quick action to set a routine, or describe the moment.
-                  </p>
-                </div>
+{/* Active routine */}
+<div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+  <div className="flex items-center justify-between">
+    <div className="text-[11px] font-semibold text-slate-300">Active routine</div>
+    <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
+      Live
+    </span>
+  </div>
+  <p className="mt-2 text-[13px] leading-6 text-slate-200">{activeRoutine}</p>
+  <p className="mt-2 text-[11px] leading-5 text-slate-400">
+    Tap a quick action to set a routine, or describe the moment.
+  </p>
+</div>
 
-                {/* Mental Watchlist */}
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-                  <div className="text-[11px] font-semibold text-slate-300">Mental watchlist</div>
-                  <div className="mt-3 space-y-2">
-                    <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
-                      <div className="text-[11px] font-semibold text-slate-200">Breath</div>
-                      <div className="mt-1 text-[11px] leading-5 text-slate-400">One calm exhale before action.</div>
-                    </div>
-                    <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
-                      <div className="text-[11px] font-semibold text-slate-200">Cue</div>
-                      <div className="mt-1 text-[11px] leading-5 text-slate-400">One word that locks you in.</div>
-                    </div>
-                    <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
-                      <div className="text-[11px] font-semibold text-slate-200">Next action</div>
-                      <div className="mt-1 text-[11px] leading-5 text-slate-400">Only the next rep/play matters.</div>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Session notes */}
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-                  <div className="text-[11px] font-semibold text-slate-300">Session notes</div>
+    {/* Mental Watchlist */}
+    <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+      <div className="text-[11px] font-semibold text-slate-300">Mental watchlist</div>
+      <div className="mt-3 space-y-2">
+        <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
+          <div className="text-[11px] font-semibold text-slate-200">Breath</div>
+          <div className="mt-1 text-[11px] leading-5 text-slate-400">One calm exhale before action.</div>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
+          <div className="text-[11px] font-semibold text-slate-200">Cue</div>
+          <div className="mt-1 text-[11px] leading-5 text-slate-400">One word that locks you in.</div>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
+          <div className="text-[11px] font-semibold text-slate-200">Next action</div>
+          <div className="mt-1 text-[11px] leading-5 text-slate-400">Only the next rep/play matters.</div>
+        </div>
+      </div>
+    </div>
 
-                  {sessionNotes.length ? (
-                    <ul className="mt-3 list-disc space-y-2 pl-5 text-[12px] leading-6 text-slate-200">
-                      {sessionNotes.map((n, idx) => (
-                        <li key={idx}>{n}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="mt-2 text-[11px] leading-5 text-slate-400">
-                      Your key takeaways will appear here after the coach responds.
-                    </p>
-                  )}
-                </div>
+    {/* Quick actions (duplicate, but dashboard-style) */}
+    <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+      <div className="text-[11px] font-semibold text-slate-300">Quick actions</div>
+      <div className="mt-3 grid grid-cols-1 gap-2">
+        {QUICK_ACTIONS.map((a) => (
+          <button
+            key={a.k}
+            onClick={() => applyQuick(a.prompt, a.tag)}
+            className="rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-left hover:bg-white/5"
+            title={a.prompt}
+          >
+            <div className="flex items-center justify-between">
+              <div className="text-[12px] font-semibold text-slate-100">{a.title}</div>
+              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
+                {a.tag}
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
 
-                {/* Quick actions (duplicate, but dashboard-style) */}
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-                  <div className="text-[11px] font-semibold text-slate-300">Quick actions</div>
-                  <div className="mt-3 grid grid-cols-1 gap-2">
-                    {QUICK_ACTIONS.map((a) => (
-                      <button
-                        key={a.k}
-                        onClick={() => applyQuick(a.prompt, a.tag)}
-                        className="rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-left hover:bg-white/5"
-                        title={a.prompt}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="text-[12px] font-semibold text-slate-100">{a.title}</div>
-                          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-                            {a.tag}
-                          </span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Safety (with link) */}
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-                  <div className="text-[11px] font-semibold text-slate-300">Safety</div>
-                  <p className="mt-2 text-[12px] leading-6 text-slate-300">
-                    Coaching only — not medical care. If you’re in crisis, seek immediate local professional help.{" "}
-                    <Link href="/legal" className="underline underline-offset-4 hover:text-white">
-                      Legal disclaimer
-                    </Link>
-                  </p>
-                </div>
-              </div>
-            </aside>
+    {/* Safety (with link) */}
+    <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+      <div className="text-[11px] font-semibold text-slate-300">Safety</div>
+      <p className="mt-2 text-[12px] leading-6 text-slate-300">
+        Coaching only — not medical care. If you’re in crisis, seek immediate local professional help.{" "}
+        <Link href="/legal" className="underline underline-offset-4 hover:text-white">
+          Legal disclaimer
+        </Link>
+      </p>
+    </div>
+  </div>
+</aside>
           </div>
         </main>
       </div>

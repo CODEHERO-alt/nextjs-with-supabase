@@ -220,31 +220,31 @@ const DELIVERABLES: DeliverableItem[] = [
   {
     title: "Reset Routine Generator",
     description:
-      "A short routine for the exact moment you tighten — designed for your sport and role.",
+      "A short routine for the exact moment you tighten-UP — specifically designed for your sport and role.",
     example: "“Breathe 4–2–6 → cue ‘Next rep’ → eyes to target → first action.”",
   },
   {
     title: "Pre-game Script Builder",
     description:
-      "A tight mental script for the hour before competition (no fluff, all execution).",
+      "A tight mental script for the hour before competition!.",
     example: "“I expect nerves → I return to breath → I execute one rep at a time.”",
   },
   {
     title: "Pressure If/Then Plan",
     description:
-      "A decision tree for clutch moments so your mind doesn’t improvise under stress.",
+      "A decision tree for clutch moments so your mind doesn’t go haywire under stress.",
     example: "“If I feel rushed → slow exhale → pick one target → commit.”",
   },
   {
     title: "Confidence Rebuild Protocol",
     description:
-      "A practical way to rebuild trust after injury, mistakes, or a bad stretch.",
+      "A practical way to rebuild self-trust after an injury, a mistakes, or a bad stretch.",
     example: "Exposure ladder + proof log + controllables checklist.",
   },
   {
     title: "Post-game Debrief Template",
     description:
-      "A debrief that builds learning without self-attack — so you improve faster.",
+      "A debrief that builds learning without self-attack, so you improve faster.",
     example: "3 wins · 1 lesson · 1 adjustment · next rep intention.",
   },
 ];
@@ -1235,8 +1235,8 @@ const FrameworkSection: React.FC = () => {
     <Section
       id="framework"
       eyebrow="Core framework"
-      title="A framework is useful only if it becomes automatic."
-      kicker="Dr. Brett GPT uses a simple structure to turn messy pressure into clear routines. Keeping it balanced: Enough structure to guide, not so much that it feels preachy."
+      title="A core framework is fundamental to success."
+      kicker="Dr. Brett GPT uses a simple structure to turn uncomfortable pressure into positive outcomes. You will learned to keep it balanced, positive, and organized."
       align="left"
     >
       <div className="grid gap-6 md:grid-cols-[1.15fr,1fr] items-start">

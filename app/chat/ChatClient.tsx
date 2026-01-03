@@ -46,32 +46,41 @@ const THINKING_STEPS = [
  * - Clutch (late-game)
  * - Post-game review
  */
-const QUICK_ACTIONS: Array<{
-  k: string;
-  title: string;
-  prompt: string;
-  tag: string;
-}> = [
+const QUICK_ACTIONS = [
   {
-    k: "reset",
-    title: "90s Reset (after mistake)",
-    prompt:
-      "Build me a 90-second reset routine I can run after a mistake. My sport is ___. The moment I struggle most is ___.",
+    k: "mistake",
+    title: "After a mistake",
     tag: "Reset",
+    prompt:
+      "I just made a mistake and my body tightened up. I need a quick reset routine so I can execute the next rep.",
   },
   {
     k: "clutch",
-    title: "Clutch cue (late-game)",
-    prompt:
-      "Late in games I rush decisions. Give me one cue + one breath pattern + one next-action focus for the next play.",
+    title: "Late-game / clutch",
     tag: "Clutch",
+    prompt:
+      "It’s a high-pressure moment and I can feel myself thinking outcomes instead of executing. I need a short routine for this moment.",
   },
   {
-    k: "review",
-    title: "5-min post-game review",
+    k: "injury",
+    title: "Coming back from injury",
+    tag: "Confidence",
     prompt:
-      "Guide me through a 5-minute post-game review. Today I did ___. I struggled with ___. One thing I’ll practice is ___.",
-    tag: "Review",
+      "I’m coming back from injury and I don’t fully trust my body yet. I need a simple routine to commit to movement again.",
+  },
+  {
+    k: "slump",
+    title: "Slump / cold streak",
+    tag: "Reset",
+    prompt:
+      "I’m in a slump and I’m pressing. I need a routine to stop forcing and get back to clean execution.",
+  },
+  {
+    k: "leadership",
+    title: "Leadership pressure",
+    tag: "Poise",
+    prompt:
+      "People are looking to me to lead and I can feel the pressure. I need a routine to stay composed and decisive.",
   },
 ];
 

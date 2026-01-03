@@ -168,7 +168,7 @@ const PILLARS: PillProps[] = [
 const MOMENTS: MomentItem[] = [
   {
     title: "After a mistake",
-    moment: "You miss, turnover, shank, or get beat — and your body tightens.",
+    moment: "A miss, turnover, shank, yip, or a tough beat - your body tightens-up.",
     tool: "10-second Reset",
     output: "Breath cue + focus phrase + next action",
   },
@@ -180,37 +180,37 @@ const MOMENTS: MomentItem[] = [
   },
   {
     title: "Late-game / clutch",
-    moment: "It’s close. You start thinking outcomes instead of execution.",
+    moment: "The tendency to start thinking of the outcome instead of staying grounded in the moment.",
     tool: "If/Then Pressure Plan",
     output: "Triggers → response plan → attention target",
   },
   {
     title: "When coach subs you",
-    moment: "You take it personally and lose emotional control.",
+    moment: "The tendency to take it personally and lose confidence.",
     tool: "Perspective Reframe",
     output: "Meaning reset + next rep commitment",
   },
   {
     title: "Return from injury",
-    moment: "You hesitate and don’t trust your body.",
+    moment: "The tendency to hesitate and not trust your body.",
     tool: "Confidence Rebuild",
     output: "Exposure ladder + “proof log” routine",
   },
   {
     title: "Slumps & cold streaks",
-    moment: "Confidence dips, you start forcing results.",
+    moment: "The tendency to force results when confidence dips.",
     tool: "Process Lock",
     output: "2 controllables + one non-negotiable rep",
   },
   {
     title: "Crowd / scrutiny",
-    moment: "You feel watched and start performing ‘for approval’.",
+    moment: "The tendency to feel self-conscious which inevitably, negatively affects performance.",
     tool: "Attention Narrowing",
     output: "Visual target + breath cadence + cue word",
   },
   {
     title: "Team leadership pressure",
-    moment: "You feel responsible for everything and play tight.",
+    moment: "The tendency to play tight when expectations are higher when you’re a team lead.",
     tool: "Role Clarity",
     output: "Role statement + on-court boundaries",
   },
@@ -824,7 +824,7 @@ const ChatDemo: React.FC<{ onWatchDemo: () => void }> = ({ onWatchDemo }) => {
       >
         <input
           type="text"
-          placeholder="Describe the moment you tighten…"
+          placeholder="Describe the moment you tighten-up"
           className="flex-1 bg-transparent text-xs md:text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
           value={userInput}
           onChange={(e: ChangeEvent<HTMLInputElement>) => setUserInput(e.target.value)}
@@ -1114,7 +1114,7 @@ const StatsSection: React.FC = () => {
                 </div>
                 <p>
                   “One mistake and I’d go into protection mode. I stopped
-                  attacking and started surviving.”
+                  attacking and started protecting.”
                 </p>
               </div>
               <div className="rounded-2xl bg-purple-500/[0.07] border border-purple-300/20 px-3.5 py-3 text-xs text-slate-100 leading-relaxed">
@@ -1132,7 +1132,7 @@ const StatsSection: React.FC = () => {
           <div className="space-y-3 md:space-y-4">
             <SurfaceB className="p-5">
               <p className="text-sm text-slate-200/90 leading-relaxed">
-                Built for athletes who want{" "}
+                Built for athletes who want to execute under pressure{" "}
                 <span className="font-semibold text-white">execution tools</span>{" "}
                 — not hype.
               </p>
@@ -1194,8 +1194,8 @@ const DeliverablesSection: React.FC = () => {
     <Section
       id="deliverables"
       eyebrow="What you get"
-      title="In 10 minutes, you leave with something usable."
-      kicker="This is the difference between a nice conversation and actual training, We give you a routine you can run on the field."
+      title="In 10 minutes, you leave with something invaluable."
+      kicker="This is the difference between nice conversation and Mental Game Trainig. We give you a routine you can trust on and off the field.."
       align="center"
     >
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

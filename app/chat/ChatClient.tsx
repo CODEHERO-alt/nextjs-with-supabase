@@ -30,6 +30,16 @@ const BRAND = {
 };
 
 /**
+ * “Thinking stream” steps (UI-only; does NOT expose model reasoning)
+ * Keep it short + neutral.
+ */
+const THINKING_STEPS = [
+  "Thinking…",
+  "Analyzing your situation…",
+  "Drafting a practical response…",
+] as const;
+
+/**
  * Reduced quick actions: 3 (more room for sessions list)
  * Keep the most-used / highest-value:
  * - Reset (after mistake)
@@ -220,7 +230,6 @@ async function callApiChatStreaming(payload: {
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    // IMPORTANT: tell your /api/chat to stream
     body: JSON.stringify({ messages: payload.messages, stream: true }),
   });
 
@@ -317,7 +326,7 @@ function parseAssistantBlocks(text: string): RenderBlock[] {
   return blocks;
 }
 
-
+// --- B2 helpers ---
 function titleCase(s: string) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
@@ -351,6 +360,7 @@ function deriveMantraFromAssistant(text: string): string {
   return "Slow is smooth. Smooth is fast.";
 }
 
+// --- B3 helper ---
 function deriveSessionNotes(text: string): string[] {
   const blocks = parseAssistantBlocks(text || "");
   const notes: string[] = [];
@@ -435,29 +445,25 @@ export default function ChatPage() {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  // Seed ONCE so ids stay consistent
+  const seededRef = useRef<Session | null>(null);
+  if (!seededRef.current) seededRef.current = seedSessionStatic();
+  const seeded = seededRef.current;
+
   // Render-safe initial state (static seed)
-  const [sessions, setSessions] = useState<Session[]>(() => [seedSessionStatic()]);
-  const [activeId, setActiveId] = useState<string>(() => seedSessionStatic().id);
+  const [sessions, setSessions] = useState<Session[]>(() => [seeded]);
+  const [activeId, setActiveId] = useState<string>(() => seeded.id);
 
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
 
-  const [thinkingPhase, setThinkingPhase] = useState(0);
-
+  // B2/B3 state
   const [mantra, setMantra] = useState("Slow is smooth. Smooth is fast.");
   const [activeRoutine, setActiveRoutine] = useState<string>("—");
   const [sessionNotes, setSessionNotes] = useState<string[]>([]);
 
-  useEffect(() => {
-    if (!isTyping) {
-      setThinkingPhase(0);
-      return;
-    }
-    const id = window.setInterval(() => {
-      setThinkingPhase((p) => (p + 1) % THINKING_STEPS.length);
-    }, 700);
-    return () => window.clearInterval(id);
-  }, [isTyping]);
+  // Thinking stream state (UI-only)
+  const [thinkingPhase, setThinkingPhase] = useState(0);
 
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const composingRef = useRef(false);
@@ -481,7 +487,6 @@ export default function ChatPage() {
       return;
     }
 
-    const seeded = seedSessionStatic();
     const hydrated: Session = {
       ...seeded,
       id: rid("sess"),
@@ -524,21 +529,31 @@ export default function ChatPage() {
     };
   }, []);
 
+  // Thinking stream ticker (UI only)
+  useEffect(() => {
+    if (!isTyping) return;
+    setThinkingPhase(0);
+    const id = window.setInterval(() => {
+      setThinkingPhase((p) => (p + 1) % THINKING_STEPS.length);
+    }, 700);
+    return () => window.clearInterval(id);
+  }, [isTyping]);
+
   const active = useMemo(() => sessions.find((s) => s.id === activeId) ?? sessions[0], [sessions, activeId]);
 
+  // B2/B3: auto-update mantra + notes from last assistant message in active session
+  useEffect(() => {
+    if (!active) return;
 
-useEffect(() => {
-  if (!active) return;
+    const lastAssistant = [...active.messages]
+      .reverse()
+      .find((m) => m.role === "assistant" && (m.content || "").trim());
 
-  const lastAssistant = [...active.messages]
-    .reverse()
-    .find((m) => m.role === "assistant" && (m.content || "").trim());
+    if (!lastAssistant) return;
 
-  if (!lastAssistant) return;
-
-  setMantra(deriveMantraFromAssistant(lastAssistant.content));
-  setSessionNotes(deriveSessionNotes(lastAssistant.content));
-}, [activeId, active?.messages]);
+    setMantra(deriveMantraFromAssistant(lastAssistant.content));
+    setSessionNotes(deriveSessionNotes(lastAssistant.content));
+  }, [activeId, active?.messages]);
 
   function markUserScrolling() {
     userScrollRef.current.active = true;
@@ -556,7 +571,6 @@ useEffect(() => {
     // If user is actively scrolling, don't interfere
     if (userScrollRef.current.active) return;
 
-    // Only scroll if the message start is below/above the visible viewport significantly
     const box = scroller.getBoundingClientRect();
     const mbox = el.getBoundingClientRect();
 
@@ -598,8 +612,15 @@ useEffect(() => {
     setActiveId(s.id);
   }
 
-  function applyQuick(prompt: string) {
+  function applyQuick(prompt: string, tag?: string) {
     setInput(prompt);
+    if (tag) setActiveRoutine(mapTagToRoutine(tag));
+
+    // focus composer (safe: runs on click only)
+    requestAnimationFrame(() => {
+      const el = document.querySelector("textarea") as HTMLTextAreaElement | null;
+      el?.focus?.();
+    });
   }
 
   function resetActive() {
@@ -632,30 +653,33 @@ useEffect(() => {
     );
     setIsTyping(false);
     setInput("");
+    setActiveRoutine("—");
+    setSessionNotes([]);
+    setMantra("Slow is smooth. Smooth is fast.");
   }
 
   function deleteSession(sessionId: string) {
     setSessions((prev) => {
       const next = prev.filter((s) => s.id !== sessionId);
       if (!next.length) {
-        // always keep at least one session
-        const s = {
+        const now = Date.now();
+        const s: Session = {
           id: rid("sess"),
           title: "New session",
-          updatedAt: Date.now(),
+          updatedAt: now,
           messages: [
             {
               id: rid("sys"),
-              role: "system" as const,
+              role: "system",
               content: "Private coaching session. Keep answers practical and athlete-friendly.",
-              createdAt: Date.now(),
+              createdAt: now,
             },
             {
               id: rid("a"),
-              role: "assistant" as const,
+              role: "assistant",
               content: "What’s the situation you want to handle better — and when does it show up?",
-              createdAt: Date.now(),
-              meta: { label: "Start", tone: "steady" as const },
+              createdAt: now,
+              meta: { label: "Start", tone: "steady" },
             },
           ],
         };
@@ -663,7 +687,6 @@ useEffect(() => {
         return [s];
       }
 
-      // if deleting active, switch to newest remaining
       if (activeId === sessionId) setActiveId(next[0].id);
       return next;
     });
@@ -782,6 +805,7 @@ useEffect(() => {
   }
 
   return (
+    // NOTE: lock to viewport height so page does not grow
     <div className="h-screen bg-[#0b0f19] text-slate-100 overflow-hidden">
       {/* Fixed interactive gradient background — never “cuts off” */}
       <div className="pointer-events-none fixed inset-0 -z-10">
@@ -811,11 +835,12 @@ useEffect(() => {
         <div className="absolute inset-0 opacity-[0.08] bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.65)_1px,transparent_0)] [background-size:24px_24px]" />
       </div>
 
+      {/* full height layout */}
       <div className="relative mx-auto flex h-screen max-w-[1500px]">
         {/* Sidebar */}
         <aside
           className={[
-            "hidden lg:flex h-screen w-[320px] shrink-0 flex-col border-r border-white/10 bg-black/10 backdrop-blur-xl",
+            "hidden lg:flex h-full w-[320px] shrink-0 flex-col border-r border-white/10 bg-black/10 backdrop-blur-xl",
             sidebarOpen ? "" : "w-0 overflow-hidden opacity-0",
           ].join(" ")}
         >
@@ -925,16 +950,16 @@ useEffect(() => {
                 Coaching only — not medical care. If you’re in crisis, seek immediate local professional help.{" "}
                 <Link href="/legal" className="underline underline-offset-4 hover:text-white">
                   Legal disclaimer
-                  </Link>
+                </Link>
               </div>
             </div>
           </div>
         </aside>
 
         {/* Main */}
-        <main className="relative z-10 flex h-screen flex-1 flex-col min-w-0">
+        <main className="relative z-10 flex h-full flex-1 flex-col min-w-0">
           {/* Top bar */}
-          <div className="sticky top-0 z-20 border-b border-white/10 bg-black/10 backdrop-blur-xl">
+          <div className="shrink-0 sticky top-0 z-20 border-b border-white/10 bg-black/10 backdrop-blur-xl">
             <div className="mx-auto flex max-w-[1200px] items-center justify-between px-4 py-3 md:px-6">
               <div className="flex items-center gap-3">
                 {!sidebarOpen && (
@@ -981,8 +1006,11 @@ useEffect(() => {
                 onScroll={markUserScrolling}
                 onWheel={markUserScrolling}
                 onTouchMove={markUserScrolling}
-                style={{ scrollbarGutter: "stable" }}
-                className="min-h-0 flex-1 overflow-y-scroll overflow-x-hidden rounded-2xl border border-white/10 bg-black/10 backdrop-blur-xl"
+                className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/10 bg-black/10 backdrop-blur-xl"
+                style={{
+                  // keeps layout from shifting when scrollbar appears
+                  scrollbarGutter: "stable",
+                }}
               >
                 <div className="space-y-4 p-4 md:p-5">
                   {(active?.messages ?? [])
@@ -998,23 +1026,24 @@ useEffect(() => {
                       </div>
                     ))}
 
+                  {/* ChatGPT-style "thinking stream" */}
                   {isTyping && (
                     <div className="flex gap-3">
                       <Avatar label="BG" />
                       <div className="max-w-[82ch] rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
                         <div className="text-[11px] font-semibold text-slate-100">{BRAND.name}</div>
-
-                        <div className="mt-2">
-                          <div className="text-[12px] text-slate-200 animate-pulse">
-                            {THINKING_STEPS[thinkingPhase]?.title}…
+                        <div className="mt-2 space-y-1 text-[12px] leading-6 text-slate-300">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400/80" />
+                            <span>{THINKING_STEPS[thinkingPhase]}</span>
                           </div>
-
-                          <div className="mt-2 space-y-1 text-[11px] leading-5 text-slate-400">
-                            {THINKING_STEPS[thinkingPhase]?.lines?.map((l, i) => (
-                              <div key={i} className="animate-pulse">
-                                {l}
-                              </div>
-                            ))}
+                          <div className="flex items-center gap-2 opacity-70">
+                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400/60" />
+                            <span>{THINKING_STEPS[(thinkingPhase + 1) % THINKING_STEPS.length]}</span>
+                          </div>
+                          <div className="flex items-center gap-2 opacity-50">
+                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400/40" />
+                            <span>{THINKING_STEPS[(thinkingPhase + 2) % THINKING_STEPS.length]}</span>
                           </div>
                         </div>
                       </div>
@@ -1024,7 +1053,7 @@ useEffect(() => {
               </div>
 
               {/* Composer */}
-              <div className="mt-4 rounded-2xl border border-white/10 bg-black/10 p-3 backdrop-blur-xl">
+              <div className="mt-4 shrink-0 rounded-2xl border border-white/10 bg-black/10 p-3 backdrop-blur-xl">
                 <div className="flex items-end gap-2">
                   <textarea
                     value={input}
@@ -1069,90 +1098,106 @@ useEffect(() => {
             </section>
 
             {/* Right panel — Performance Dashboard */}
-<aside className="hidden w-[360px] shrink-0 lg:block">
-  <div className="sticky top-[84px] space-y-4">
-    {/* Focus / Mantra */}
-    <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-      <div className="flex items-center justify-between">
-        <div className="text-[11px] font-semibold text-slate-300">Today’s focus</div>
-        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-          Mantra
-        </span>
-      </div>
-      <p className="mt-2 text-[13px] leading-6 text-slate-200">{mantra}</p>
-      <p className="mt-2 text-[11px] leading-5 text-slate-400">
-        Want a custom mantra? Use a quick action or describe the moment.
-      </p>
-    </div>
+            <aside className="hidden w-[360px] shrink-0 lg:block">
+              <div className="sticky top-[84px] space-y-4">
+                {/* Focus / Mantra */}
+                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[11px] font-semibold text-slate-300">Today’s focus</div>
+                    <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
+                      Mantra
+                    </span>
+                  </div>
+                  <p className="mt-2 text-[13px] leading-6 text-slate-200">{mantra}</p>
+                  <p className="mt-2 text-[11px] leading-5 text-slate-400">
+                    Want a custom mantra? Use a quick action or describe the moment.
+                  </p>
+                </div>
 
-{/* Active routine */}
-<div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-  <div className="flex items-center justify-between">
-    <div className="text-[11px] font-semibold text-slate-300">Active routine</div>
-    <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-      Live
-    </span>
-  </div>
-  <p className="mt-2 text-[13px] leading-6 text-slate-200">{activeRoutine}</p>
-  <p className="mt-2 text-[11px] leading-5 text-slate-400">
-    Tap a quick action to set a routine, or describe the moment.
-  </p>
-</div>
+                {/* Active routine */}
+                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[11px] font-semibold text-slate-300">Active routine</div>
+                    <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
+                      Live
+                    </span>
+                  </div>
+                  <p className="mt-2 text-[13px] leading-6 text-slate-200">{activeRoutine}</p>
+                  <p className="mt-2 text-[11px] leading-5 text-slate-400">
+                    Tap a quick action to set a routine, or describe the moment.
+                  </p>
+                </div>
 
+                {/* Mental Watchlist */}
+                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+                  <div className="text-[11px] font-semibold text-slate-300">Mental watchlist</div>
+                  <div className="mt-3 space-y-2">
+                    <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
+                      <div className="text-[11px] font-semibold text-slate-200">Breath</div>
+                      <div className="mt-1 text-[11px] leading-5 text-slate-400">One calm exhale before action.</div>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
+                      <div className="text-[11px] font-semibold text-slate-200">Cue</div>
+                      <div className="mt-1 text-[11px] leading-5 text-slate-400">One word that locks you in.</div>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
+                      <div className="text-[11px] font-semibold text-slate-200">Next action</div>
+                      <div className="mt-1 text-[11px] leading-5 text-slate-400">Only the next rep/play matters.</div>
+                    </div>
+                  </div>
+                </div>
 
-    {/* Mental Watchlist */}
-    <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-      <div className="text-[11px] font-semibold text-slate-300">Mental watchlist</div>
-      <div className="mt-3 space-y-2">
-        <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
-          <div className="text-[11px] font-semibold text-slate-200">Breath</div>
-          <div className="mt-1 text-[11px] leading-5 text-slate-400">One calm exhale before action.</div>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
-          <div className="text-[11px] font-semibold text-slate-200">Cue</div>
-          <div className="mt-1 text-[11px] leading-5 text-slate-400">One word that locks you in.</div>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
-          <div className="text-[11px] font-semibold text-slate-200">Next action</div>
-          <div className="mt-1 text-[11px] leading-5 text-slate-400">Only the next rep/play matters.</div>
-        </div>
-      </div>
-    </div>
+                {/* Session notes */}
+                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+                  <div className="text-[11px] font-semibold text-slate-300">Session notes</div>
 
-    {/* Quick actions (duplicate, but dashboard-style) */}
-    <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-      <div className="text-[11px] font-semibold text-slate-300">Quick actions</div>
-      <div className="mt-3 grid grid-cols-1 gap-2">
-        {QUICK_ACTIONS.map((a) => (
-          <button
-            key={a.k}
-            onClick={() => applyQuick(a.prompt, a.tag)}
-            className="rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-left hover:bg-white/5"
-            title={a.prompt}
-          >
-            <div className="flex items-center justify-between">
-              <div className="text-[12px] font-semibold text-slate-100">{a.title}</div>
-              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-                {a.tag}
-              </span>
-            </div>
-          </button>
-        ))}
-      </div>
-    </div>
+                  {sessionNotes.length ? (
+                    <ul className="mt-3 list-disc space-y-2 pl-5 text-[12px] leading-6 text-slate-200">
+                      {sessionNotes.map((n, idx) => (
+                        <li key={idx}>{n}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-[11px] leading-5 text-slate-400">
+                      Your key takeaways will appear here after the coach responds.
+                    </p>
+                  )}
+                </div>
 
-    {/* Safety (with link) */}
-    <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-      <div className="text-[11px] font-semibold text-slate-300">Safety</div>
-      <p className="mt-2 text-[12px] leading-6 text-slate-300">
-        Coaching only — not medical care. If you’re in crisis, seek immediate local professional help.{" "}
-        <Link href="/legal" className="underline underline-offset-4 hover:text-white">
-          Legal disclaimer
-        </Link>
-      </p>
-    </div>
-  </div>
-</aside>
+                {/* Quick actions (dashboard) */}
+                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+                  <div className="text-[11px] font-semibold text-slate-300">Quick actions</div>
+                  <div className="mt-3 grid grid-cols-1 gap-2">
+                    {QUICK_ACTIONS.map((a) => (
+                      <button
+                        key={a.k}
+                        onClick={() => applyQuick(a.prompt, a.tag)}
+                        className="rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-left hover:bg-white/5"
+                        title={a.prompt}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="text-[12px] font-semibold text-slate-100">{a.title}</div>
+                          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
+                            {a.tag}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Safety (with link) */}
+                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+                  <div className="text-[11px] font-semibold text-slate-300">Safety</div>
+                  <p className="mt-2 text-[12px] leading-6 text-slate-300">
+                    Coaching only — not medical care. If you’re in crisis, seek immediate local professional help.{" "}
+                    <Link href="/legal" className="underline underline-offset-4 hover:text-white">
+                      Legal disclaimer
+                    </Link>
+                  </p>
+                </div>
+              </div>
+            </aside>
           </div>
         </main>
       </div>

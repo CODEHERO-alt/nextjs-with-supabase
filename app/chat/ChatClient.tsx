@@ -1175,29 +1175,7 @@ export default function ChatPage() {
                     </p>
                   )}
                 </div>
-
-                {/* Quick actions (dashboard) */}
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
-                  <div className="text-[11px] font-semibold text-slate-300">Quick actions</div>
-                  <div className="mt-3 grid grid-cols-1 gap-2">
-                    {QUICK_ACTIONS.map((a) => (
-                      <button
-                        key={a.k}
-                        onClick={() => applyQuick(a.prompt, a.tag)}
-                        className="rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-left hover:bg-white/5"
-                        title={a.prompt}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="text-[12px] font-semibold text-slate-100">{a.title}</div>
-                          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
-                            {a.tag}
-                          </span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
+                
                 {/* Safety (with link) */}
                 <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
                   <div className="text-[11px] font-semibold text-slate-300">Safety</div>

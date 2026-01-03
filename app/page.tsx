@@ -1052,7 +1052,7 @@ const StatsSection: React.FC = () => {
   const { ref, inView } = useInView<HTMLDivElement>();
   const perfLift = useCountUp(12, inView, 950);
   const athletes = useCountUp(5000, inView, 950);
-  const sessions = useCountUp(70000, inView, 1050);
+  const sessions = useCountUp(100000, inView, 1050);
 
   return (
     <section ref={ref} id="results" className="relative py-16 md:py-24 lg:py-28">
@@ -1103,7 +1103,7 @@ const StatsSection: React.FC = () => {
                 </div>
               </div>
               <span className="text-[11px] text-slate-300">
-                Keep details anonymous, keep the results honest.
+                We keep details anonymous, keep the results honest.
               </span>
             </div>
 

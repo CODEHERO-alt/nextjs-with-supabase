@@ -1108,7 +1108,10 @@ export default function ChatPage() {
 
             {/* Right panel — Performance Dashboard */}
             <aside className="hidden w-[360px] shrink-0 lg:block">
-              <div className="sticky top-[84px] space-y-4">
+              <div
+                className="sticky top-[84px] max-h-[calc(100vh-84px-24px)] overflow-y-auto space-y-4 pr-1"
+                style={{ scrollbarGutter: "stable" }}
+                >
                 {/* Focus / Mantra */}
                 <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
                   <div className="flex items-center justify-between">

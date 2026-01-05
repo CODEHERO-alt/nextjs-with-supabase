@@ -1870,6 +1870,13 @@ const Footer: React.FC = () => {
               href="#faq"
               className="text-[11px] md:text-xs text-slate-300 hover:text-white underline/50 decoration-slate-600 hover:decoration-slate-200"
             >
+              <a
+                href="#Dr. Brett"
+                className="text-[11px] md:text-xs text-slate-300 hover:text-white underline/50 decoration-slate-600 hover:decoration-slate-200
+                >
+                Media
+                </a>
+
               FAQ
             </a>
             <a

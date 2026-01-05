@@ -1484,7 +1484,7 @@ const FAQSection: React.FC = () => {
       id="faq"
       eyebrow="FAQ"
       title="Clear answers before you commit."
-      kicker="The goal is trust through clarity — not over-explaining."
+      kicker="Most athletes feel a shift quickly once they have a clear routine for the specific moments they tend to tighten up and, of course, it compounds with repetition."
       align="left"
     >
       <div className="grid gap-4 md:grid-cols-[1fr,0.9fr] items-start">
@@ -1576,8 +1576,8 @@ const FinalCTASection: React.FC<{ onWatchDemo: () => void }> = ({ onWatchDemo })
               </h2>
 
               <p className="text-sm md:text-base text-slate-200/90 leading-relaxed mb-4">
-                Don’t redesign your whole mindset. Start with the exact moment
-                you tighten — and train a response you can trust.
+                Don’t redesign your whole mindset. Start with the moments you tend to tighten-up.
+                Start with One Routine. One Moment. One Big Shift.
               </p>
 
               <ul className="space-y-2 text-[11px] md:text-sm text-slate-200/90 mb-4">

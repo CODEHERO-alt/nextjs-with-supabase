@@ -102,7 +102,7 @@ const CORE_FRAMEWORK: FrameworkItem[] = [
     title: "Patience",
     tagline: "Trust reps, not instant results.",
     description:
-      "Build discipline to stick to your process when outcomes wobble — especially mid-season.",
+      "Build discipline to stick to your process when outcomes wobble, throughout the season.",
   },
   {
     title: "Perspective",
@@ -111,13 +111,13 @@ const CORE_FRAMEWORK: FrameworkItem[] = [
       "Stop letting one game define you. Stabilize confidence across weeks, not minutes.",
   },
   {
-    title: "Preparation",
+    title: "Perseverance",
     tagline: "Confidence is built — then used.",
     description:
-      "Install pre-game scripts, cues, and “if/then” plans so pressure feels familiar.",
+      "Compete with a sense freedom again! Stay ruthless about standards without becoming rigid. Let performance flow. Fall in love with the game again.",
   },
   {
-    title: "Play",
+    title: "Poise",
     tagline: "Compete with freedom again.",
     description:
       "Stay ruthless about standards without becoming rigid. Let performance flow.",
@@ -1271,10 +1271,11 @@ const FrameworkSection: React.FC = () => {
         <div className="sticky md:top-24">
           <SurfaceB className="p-5 md:p-6">
             <h3 className="text-sm md:text-base font-semibold text-white mb-2">
-              What a session actually does
+              What a Dr. BrettGPT actually does
             </h3>
             <p className="text-[11px] md:text-sm text-slate-200/90 leading-relaxed mb-3">
-              Not “How do you feel?” — it’s “Where exactly does it break, and
+              We analyze Where exactly does it go wrong and what’s the best routine for that moment
+              Identify your triggers, Not “How do you feel?” it’s “Where exactly does it break, and
               what’s the routine for that moment?”
             </p>
 
@@ -1302,7 +1303,7 @@ const FrameworkSection: React.FC = () => {
             </ul>
 
             <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-3 text-[11px] text-slate-300">
-              Tip: The routine only works if it’s trained in practice first.
+              Tip: The routine only works if it’s rehearsed in practice first.
             </div>
           </SurfaceB>
         </div>
@@ -1327,7 +1328,7 @@ const TipsAndYipsSection: React.FC = () => {
       id="tips-yips"
       eyebrow="Book"
       title='“Tips & Yips” — take the mental game with you.'
-      kicker="Dr. Brett’s book gives athletes a short, focused way to review the core mental game tools between sessions with Dr. Brett GPT."
+      kicker="Dr. Brett’s quick little e-book gives athletes and high performers a short, focused way to review the core mental game tools between sessions with Dr. Brett GPT."
       align="left"
     >
       <div className="grid items-center gap-6 md:grid-cols-[minmax(0,0.9fr),minmax(0,1.1fr)] lg:grid-cols-[minmax(0,0.85fr),minmax(0,1.15fr)]">
@@ -1348,7 +1349,7 @@ const TipsAndYipsSection: React.FC = () => {
                     Master the Mental Game: Tips to Conquer Your Yips
                   </p>
                   <p className="text-[11px] text-slate-300/90">
-                    By Dr. Brett — sports psychologist &amp; mental game coach.
+                    BY DR. BRETT - SPORTS PSYCHOLOGIST & MENTAL GAME COACH
                   </p>
                 </div>
 
@@ -1380,8 +1381,11 @@ const TipsAndYipsSection: React.FC = () => {
               is a tight, practical guide for athletes who feel blocked by
               nerves, self-doubt, or “yips.” It takes the same mental game
               principles that power Dr. Brett GPT and puts them into short,
-              readable chapters you can revisit on your phone, tablet, or
-              Kindle before practices, tournaments, and big days.
+              readable chapters. Use the book to review the fundamentals and 
+              then jump into Dr. Brett GPT to build a routine for your exact moment — to 
+              better handle mistakes confidence dips and succeed under pressure.
+              You can revisit on your phone, tablet, or Kindle before practices, 
+              tournaments, and big game days.
             </p>
             <p className="text-[11px] md:text-sm text-slate-300 leading-relaxed">
               Use the book to{" "}

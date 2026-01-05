@@ -12,6 +12,7 @@ import React, {
 
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { MediaLandingSection } from "@/components/media-landing-section";
 
 /**
  * BGPT Landing — World-class iteration (single-file App.tsx)

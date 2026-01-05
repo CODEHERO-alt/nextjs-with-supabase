@@ -1917,6 +1917,9 @@ const App: React.FC = () => {
 
       <SoftDivider label="BOOK" />
       <TipsAndYipsSection />
+      
+      <SoftDivider label="MEDIA" />
+      <MediaLandingSection />
 
       <SoftDivider label="STORIES" />
       <StoriesSection />

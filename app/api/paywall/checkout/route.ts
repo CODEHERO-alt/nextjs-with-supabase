@@ -7,18 +7,22 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 function getBaseUrl(req: Request) {
-  // Prefer env var, fallback to request origin
   const envUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   if (envUrl) return envUrl.replace(/\/$/, "");
   return new URL(req.url).origin;
 }
 
 function priceIdForPlan(plan: string) {
-  // Keep your existing `plan` field.
-  // Map it to Stripe Price IDs via env vars.
-  if (plan === "monthly") return process.env.STRIPE_PRICE_MONTHLY;
-  if (plan === "yearly") return process.env.STRIPE_PRICE_YEARLY;
-  return undefined;
+  switch (plan) {
+    case "starter":
+      return process.env.STRIPE_PRICE_STARTER;
+    case "pro":
+      return process.env.STRIPE_PRICE_PRO;
+    case "team":
+      return process.env.STRIPE_PRICE_TEAM;
+    default:
+      return undefined;
+  }
 }
 
 export async function POST(req: Request) {
@@ -44,23 +48,17 @@ export async function POST(req: Request) {
 
   const baseUrl = getBaseUrl(req);
 
-  // Create Stripe Checkout Session (test mode works automatically with sk_test_)
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer_email: user.email ?? undefined,
-
     line_items: [{ price: priceId, quantity: 1 }],
-
     success_url: `${baseUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${baseUrl}/pricing?canceled=1`,
-
-    // Optional: pass user id so you can link back later (webhook or success verify)
     metadata: {
       supabase_user_id: user.id,
       plan,
     },
   });
 
-  // Stripe hosted checkout URL
   return NextResponse.redirect(session.url!, { status: 303 });
 }

@@ -1702,6 +1702,9 @@ const TopNav: React.FC = () => {
             <a href="#results" className="hover:text-white transition-colors duration-150">
               Proof
             </a>
+            <a href="#media" className="hover:text-white transition-colors duration-150">
+              Media
+            </a>
             <a href="#moments" className="hover:text-white transition-colors duration-150">
               Moments
             </a>

@@ -6,9 +6,20 @@ import type { ReactNode } from "react";
 const LINKS = {
   youtube: "https://www.youtube.com/user/drbrettdenkin",
   tiktok: "https://www.tiktok.com/@drbrettrodemodel_academy",
-  linkedin: "https://www.linkedin.com/search/results/all/?keywords=Dr.%20Brett%20Denkin",
+  linkedin:
+    "https://www.linkedin.com/search/results/all/?keywords=Dr.%20Brett%20Denkin",
   x: "https://x.com/drbrettdenkin",
 } as const;
+
+// ✅ HD image you provided
+const DR_BRETT_IMAGE_URL =
+  "https://i.ibb.co/Pv3LrTY7/Chat-GPT-Image-Jan-6-2026-07-24-26-PM.png";
+
+// ✅ SRU Hotline number (replace these two lines with the real forwarding number)
+// Tip: use Twilio/OpenPhone/Google Voice, then put the public number here.
+const SRU_PHONE_DISPLAY = "+1 (000) 000-0000";
+const SRU_PHONE_TEL = "tel:+10000000000";
+const SRU_PHONE_SMS = "sms:+10000000000";
 
 function PlatformIcon({
   kind,
@@ -119,8 +130,12 @@ function PlatformCard({
       </ul>
 
       <div className="mt-4 rounded-xl border border-white/10 bg-black/15 px-3 py-2">
-        <div className="text-[10px] font-semibold text-slate-300">Who this is for</div>
-        <div className="mt-1 text-[12px] leading-6 text-slate-300">{audience}</div>
+        <div className="text-[10px] font-semibold text-slate-300">
+          Who this is for
+        </div>
+        <div className="mt-1 text-[12px] leading-6 text-slate-300">
+          {audience}
+        </div>
       </div>
     </div>
   );
@@ -130,57 +145,87 @@ export function MediaLandingSection() {
   return (
     <section id="media" className="mx-auto max-w-6xl px-6 pb-16 pt-10">
       {/* Hero */}
-      <div className="flex flex-col gap-6">
-        <div>
-          <div className="text-[12px] font-semibold tracking-wide text-slate-300">
-            Dr. Brett Media
+      <div className="grid gap-6 lg:grid-cols-[1.2fr_.8fr] lg:items-start">
+        <div className="flex flex-col gap-6">
+          <div>
+            <div className="text-[12px] font-semibold tracking-wide text-slate-300">
+              Dr. Brett Media
+            </div>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white md:text-4xl">
+              Where pressure gets explained in plain language
+            </h2>
+            <p className="mt-4 max-w-3xl text-[14px] leading-7 text-slate-300">
+              This is where Dr. Brett shares how people think and act when the
+              moment gets loud. It is not hype. It is not motivation. It is
+              simple, honest breakdowns that help you stay clear under pressure.
+            </p>
           </div>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white md:text-4xl">
-            Where pressure gets explained in plain language
-          </h2>
-          <p className="mt-4 max-w-3xl text-[14px] leading-7 text-slate-300">
-            This is where Dr. Brett shares how people think and act when the moment gets
-            loud. It is not hype. It is not motivation. It is simple, honest breakdowns
-            that help you stay clear under pressure.
-          </p>
+
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={LINKS.youtube}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[12px] font-semibold text-slate-100 hover:bg-white/10"
+            >
+              Watch on YouTube
+            </a>
+            <a
+              href={LINKS.x}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[12px] font-semibold text-slate-100 hover:bg-white/10"
+            >
+              Follow on X
+            </a>
+            <Link
+              href="#media-infrastructure"
+              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[12px] font-semibold text-slate-100 hover:bg-white/10"
+            >
+              See the infrastructure
+            </Link>
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <a
-            href={LINKS.youtube}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[12px] font-semibold text-slate-100 hover:bg-white/10"
-          >
-            Watch on YouTube
-          </a>
-          <a
-            href={LINKS.x}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[12px] font-semibold text-slate-100 hover:bg-white/10"
-          >
-            Follow on X
-          </a>
-          <Link
-            href="#media-infrastructure"
-            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[12px] font-semibold text-slate-100 hover:bg-white/10"
-          >
-            See the infrastructure
-          </Link>
+        {/* Dr. Brett portrait card (adds human proof + focal point) */}
+        <div className="rounded-2xl border border-white/10 bg-black/10 p-3 backdrop-blur-xl">
+          <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/20">
+            <img
+              src={DR_BRETT_IMAGE_URL}
+              alt="Dr. Brett Denkin"
+              className="h-[320px] w-full object-cover opacity-95"
+              loading="lazy"
+            />
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-3 px-1">
+            <div className="leading-tight">
+              <div className="text-[12px] font-semibold text-slate-100">
+                Dr. Brett Denkin
+              </div>
+              <div className="mt-0.5 text-[11px] text-slate-400">
+                Mental performance coach
+              </div>
+            </div>
+
+            <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-slate-300">
+              Verified
+            </span>
+          </div>
         </div>
       </div>
 
       {/* How it works */}
       <div className="mt-10 grid gap-4 md:grid-cols-2">
         <GlassCard title="How the media works">
-          Each platform has a job. Nothing is posted just to post. Some places are for
-          deep thinking, some are for quick clarity, and some are for real time reactions.
+          Each platform has a job. Nothing is posted just to post. Some places
+          are for deep thinking, some are for quick clarity, and some are for
+          real time reactions.
         </GlassCard>
 
         <GlassCard title="What to expect">
-          Clear explanations. Real examples. Simple steps. If you want noise, this is not
-          it. If you want clarity, you are in the right place.
+          Clear explanations. Real examples. Simple steps. If you want noise,
+          this is not it. If you want clarity, you are in the right place.
         </GlassCard>
       </div>
 
@@ -243,48 +288,115 @@ export function MediaLandingSection() {
       {/* Infrastructure */}
       <div id="media-infrastructure" className="mt-12">
         <div className="mb-6">
-          <div className="text-[12px] font-semibold text-slate-300">Digital Infrastructure</div>
+          <div className="text-[12px] font-semibold text-slate-300">
+            Digital Infrastructure
+          </div>
           <h3 className="mt-2 text-2xl font-semibold tracking-tight text-white">
             The layer under the content
           </h3>
           <p className="mt-3 max-w-3xl text-[13px] leading-7 text-slate-300">
-            Public content is only one layer. Some things need a quieter space so the
-            signal stays clean. This is where that happens.
+            Public content is only one layer. Some things need a quieter space
+            so the signal stays clean. This is where that happens.
           </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-white/10 bg-black/10 p-5 backdrop-blur-xl">
-            <div className="text-[12px] font-semibold text-slate-100">The SRU Hotline</div>
-            <div className="mt-1 text-[11px] text-slate-400">The Calibration Line</div>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-[12px] font-semibold text-slate-100">
+                  The SRU Hotline
+                </div>
+                <div className="mt-1 text-[11px] text-slate-400">
+                  The Calibration Line
+                </div>
+              </div>
+
+              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-slate-300">
+                Live
+              </span>
+            </div>
 
             <div className="mt-4 space-y-3 text-[13px] leading-6 text-slate-300">
-              <p>This is not a place for opinions. It is for real time calibration when a moment is hard to read.</p>
+              <p>
+                This is not a place for opinions. It is for real time calibration
+                when a moment is hard to read.
+              </p>
               <p className="text-[12px] text-slate-300">
-                People can submit anonymous voice recordings so patterns can be studied and turned into useful guidance.
+                Keep it short. Share what is happening, what you are feeling,
+                and what you need to do next. Voice patterns get studied and
+                turned into useful guidance.
               </p>
             </div>
 
-            <div className="mt-5 rounded-xl border border-white/10 bg-black/15 px-3 py-2">
-              <div className="text-[10px] font-semibold text-slate-300">Access</div>
-              <div className="mt-1 text-[12px] text-slate-300">Limited. By request only.</div>
+            {/* Hotline number + actions */}
+            <div className="mt-5 rounded-xl border border-white/10 bg-black/15 px-3 py-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="text-[10px] font-semibold text-slate-300">
+                    Hotline
+                  </div>
+                  <a
+                    href={SRU_PHONE_TEL}
+                    className="mt-1 block text-[12px] font-semibold text-slate-100 hover:underline hover:underline-offset-4"
+                  >
+                    {SRU_PHONE_DISPLAY}
+                  </a>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href={SRU_PHONE_TEL}
+                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[12px] font-semibold text-slate-100 hover:bg-white/10"
+                  >
+                    Call now
+                  </a>
+                  <a
+                    href={SRU_PHONE_SMS}
+                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[12px] font-semibold text-slate-100 hover:bg-white/10"
+                  >
+                    Text now
+                  </a>
+                </div>
+              </div>
+
+              <div className="mt-3 text-[11px] leading-6 text-slate-400">
+                If you are in a live pressure moment, aim for 20–40 seconds.
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-white/10 bg-black/15 px-3 py-2">
+              <div className="text-[10px] font-semibold text-slate-300">
+                Access
+              </div>
+              <div className="mt-1 text-[12px] text-slate-300">
+                Limited. By request only.
+              </div>
             </div>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-black/10 p-5 backdrop-blur-xl">
-            <div className="text-[12px] font-semibold text-slate-100">Ask Dr. Brett</div>
-            <div className="mt-1 text-[11px] text-slate-400">The Briefing Portal</div>
+            <div className="text-[12px] font-semibold text-slate-100">
+              Ask Dr. Brett
+            </div>
+            {/* ✅ removed "portal" language */}
+            <div className="mt-1 text-[11px] text-slate-400">
+              Send a situation
+            </div>
 
             <div className="mt-4 space-y-3 text-[13px] leading-6 text-slate-300">
               <p>This is a place to submit a situation, not start a conversation.</p>
               <p className="text-[12px] text-slate-300">
-                You can share a mental hurdle you are facing. Your situation may be reviewed publicly in a weekly breakdown
-                without names so others can learn from it too.
+                You can share a mental hurdle you are facing. Your situation may
+                be reviewed publicly in a weekly breakdown without names so
+                others can learn from it too.
               </p>
             </div>
 
             <div className="mt-5 rounded-xl border border-white/10 bg-black/15 px-3 py-2">
-              <div className="text-[10px] font-semibold text-slate-300">Outcome</div>
+              <div className="text-[10px] font-semibold text-slate-300">
+                Outcome
+              </div>
               <div className="mt-1 text-[12px] text-slate-300">
                 Clear breakdowns that turn moments into usable tools.
               </div>
@@ -293,10 +405,13 @@ export function MediaLandingSection() {
         </div>
 
         <div className="mt-6 rounded-2xl border border-white/10 bg-black/10 p-5 backdrop-blur-xl">
-          <div className="text-[12px] font-semibold text-slate-100">How this connects to BGPT</div>
+          <div className="text-[12px] font-semibold text-slate-100">
+            How this connects to BGPT
+          </div>
           <p className="mt-3 max-w-4xl text-[13px] leading-7 text-slate-300">
-            The media is public. BGPT is private. The same ideas you see here can be applied to your exact sport, role, and
-            pressure points inside BGPT. No pressure. If it fits, you will know.
+            The media is public. BGPT is private. The same ideas you see here
+            can be applied to your exact sport, role, and pressure points inside
+            BGPT. No pressure. If it fits, you will know.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Link

@@ -6,6 +6,16 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 type Role = "user" | "assistant" | "system";
 type Tone = "celebrate" | "reframe" | "steady";
 
+type Agent = "coach" | "stock" | "codecheck" | "fueling" | "errortracker";
+
+const AGENTS: Array<{ id: Agent; label: string; hint: string }> = [
+  { id: "coach", label: "Coach", hint: "BGPT coaching mode" },
+  { id: "stock", label: "Stock Data", hint: "Price, volume change, 1 headline" },
+  { id: "codecheck", label: "Code Check", hint: "Bugs + bottlenecks only" },
+  { id: "fueling", label: "Schedule Fueling", hint: "Meals + caffeine timing" },
+  { id: "errortracker", label: "Error Tracker", hint: "1 repeated mistake + 1 directive" },
+];
+
 type Message = {
   id: string;
   role: Role;
@@ -33,11 +43,7 @@ const BRAND = {
  * “Thinking stream” steps (UI-only; does NOT expose model reasoning)
  * Keep it short + neutral.
  */
-const THINKING_STEPS = [
-  "Thinking…",
-  "Analyzing your situation…",
-  "Drafting a practical response…",
-] as const;
+const THINKING_STEPS = ["Thinking…", "Analyzing your situation…", "Drafting a practical response…"] as const;
 
 /**
  * Reduced quick actions: 3 (more room for sessions list)
@@ -51,8 +57,7 @@ const QUICK_ACTIONS = [
     k: "mistake",
     title: "After a mistake",
     tag: "Reset",
-    prompt:
-      "I just made a mistake and my body tightened up. I need a quick reset routine so I can execute the next rep.",
+    prompt: "I just made a mistake and my body tightened up. I need a quick reset routine so I can execute the next rep.",
   },
   {
     k: "clutch",
@@ -65,22 +70,19 @@ const QUICK_ACTIONS = [
     k: "injury",
     title: "Coming back from injury",
     tag: "Confidence",
-    prompt:
-      "I’m coming back from injury and I don’t fully trust my body yet. I need a simple routine to commit to movement again.",
+    prompt: "I’m coming back from injury and I don’t fully trust my body yet. I need a simple routine to commit to movement again.",
   },
   {
     k: "slump",
     title: "Slump / cold streak",
     tag: "Reset",
-    prompt:
-      "I’m in a slump and I’m pressing. I need a routine to stop forcing and get back to clean execution.",
+    prompt: "I’m in a slump and I’m pressing. I need a routine to stop forcing and get back to clean execution.",
   },
   {
     k: "leadership",
     title: "Leadership pressure",
     tag: "Poise",
-    prompt:
-      "People are looking to me to lead and I can feel the pressure. I need a routine to stay composed and decisive.",
+    prompt: "People are looking to me to lead and I can feel the pressure. I need a routine to stay composed and decisive.",
   },
 ];
 
@@ -234,12 +236,13 @@ function seedSessionStatic(): Session {
  */
 async function callApiChatStreaming(payload: {
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
+  agent: Agent;
   onToken: (token: string) => void;
 }) {
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages: payload.messages, stream: true }),
+    body: JSON.stringify({ messages: payload.messages, agent: payload.agent, stream: true }),
   });
 
   if (!res.ok) {
@@ -466,6 +469,8 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
 
+  const [agent, setAgent] = useState<Agent>("coach");
+
   // B2/B3 state
   const [mantra, setMantra] = useState("Slow is smooth. Smooth is fast.");
   const [activeRoutine, setActiveRoutine] = useState<string>("—");
@@ -554,9 +559,7 @@ export default function ChatPage() {
   useEffect(() => {
     if (!active) return;
 
-    const lastAssistant = [...active.messages]
-      .reverse()
-      .find((m) => m.role === "assistant" && (m.content || "").trim());
+    const lastAssistant = [...active.messages].reverse().find((m) => m.role === "assistant" && (m.content || "").trim());
 
     if (!lastAssistant) return;
 
@@ -761,6 +764,7 @@ export default function ChatPage() {
 
       await callApiChatStreaming({
         messages: payloadMessages,
+        agent,
         onToken: (token) => {
           setSessions((prev) =>
             prev.map((s) =>
@@ -822,8 +826,7 @@ export default function ChatPage() {
         <div
           className="absolute inset-0 opacity-80"
           style={{
-            background:
-              "radial-gradient(900px circle at var(--mx) var(--my), rgba(90,79,246,0.18), transparent 55%)",
+            background: "radial-gradient(900px circle at var(--mx) var(--my), rgba(90,79,246,0.18), transparent 55%)",
           }}
         />
         <div
@@ -989,6 +992,25 @@ export default function ChatPage() {
               </div>
 
               <div className="flex items-center gap-2">
+                <div className="relative">
+                  <label className="sr-only" htmlFor="agent">
+                    Agent
+                  </label>
+                  <select
+                    id="agent"
+                    value={agent}
+                    onChange={(e) => setAgent(e.target.value as Agent)}
+                    className="h-[30px] rounded-lg border border-white/10 bg-white/5 px-2 text-[11px] text-slate-100 outline-none hover:bg-white/10"
+                    title={AGENTS.find((a) => a.id === agent)?.hint ?? "Agent mode"}
+                  >
+                    {AGENTS.map((a) => (
+                      <option key={a.id} value={a.id} className="bg-[#0b0f19]">
+                        {a.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <button
                   onClick={resetActive}
                   className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] text-slate-100 hover:bg-white/10"
@@ -1111,7 +1133,7 @@ export default function ChatPage() {
               <div
                 className="sticky top-[84px] max-h-[calc(100vh-84px-24px)] overflow-y-auto space-y-4 pr-1"
                 style={{ scrollbarGutter: "stable" }}
-                >
+              >
                 {/* Focus / Mantra */}
                 <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
                   <div className="flex items-center justify-between">
@@ -1175,7 +1197,7 @@ export default function ChatPage() {
                     </p>
                   )}
                 </div>
-                
+
                 {/* Safety (with link) */}
                 <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
                   <div className="text-[11px] font-semibold text-slate-300">Safety</div>

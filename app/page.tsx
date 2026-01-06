@@ -1702,33 +1702,41 @@ const TopNav: React.FC = () => {
             <a href="#results" className="hover:text-white transition-colors duration-150">
               Proof
             </a>
+
             <a href="#moments" className="hover:text-white transition-colors duration-150">
               Moments
             </a>
+            
             <a
               href="#deliverables"
               className="hover:text-white transition-colors duration-150"
-            >
+              >
               What you get
             </a>
+            
             <a
               href="#framework"
               className="hover:text-white transition-colors duration-150"
-            >
+              >
               Framework
             </a>
-            <a href="#tips-yips" className="hover:text-white transition-colors duration-150">
+            
+            <a
+              href="#tips-yips"
+              className="hover:text-white transition-colors duration-150"
+              >
               Book
             </a>
-            <a href="#faq" className="hover:text-white transition-colors duration-150">
-              <a href="#media" className="hover:text-white transition-colors duration-150">
+
+            <a href="#media" className="hover:text-white transition-colors duration-150">
               Media
             </a>
-              <a href="#faq" className="hover:text-white transition-colors duration-150">
+            
+            <a href="#faq" className="hover:text-white transition-colors duration-150">
               FAQ
-              </a>
-            </nav>
-
+            </a>
+          </nav>
+          
           <div className="flex items-center gap-2">
             <a
               href={PRICING_URL}

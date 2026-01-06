@@ -1724,9 +1724,10 @@ const TopNav: React.FC = () => {
               <a href="#media" className="hover:text-white transition-colors duration-150">
               Media
             </a>
+              <a href="#faq" className="hover:text-white transition-colors duration-150">
               FAQ
-            </a>
-          </nav>
+              </a>
+            </nav>
 
           <div className="flex items-center gap-2">
             <a

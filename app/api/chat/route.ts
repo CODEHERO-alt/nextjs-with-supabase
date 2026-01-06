@@ -23,10 +23,11 @@ const DAILY_COST_LIMIT_USD = Number(process.env.AI_DAILY_COST_LIMIT_USD ?? 3);
 const INPUT_USD_PER_1K = Number(process.env.OPENAI_INPUT_USD_PER_1K ?? 0);
 const OUTPUT_USD_PER_1K = Number(process.env.OPENAI_OUTPUT_USD_PER_1K ?? 0);
 
-const SYSTEM_PROMPT = `
+const BASE_SYSTEM_PROMPT = `
 You are Dr. Brett GPT.
 
 Your job is NOT therapy.
+
 Your job is real-time performance calibration for athletes (16+), entrepreneurs, and high performers.
 
 Identity / voice (The Gentleman Sage):
@@ -54,7 +55,7 @@ Hard boundaries (must follow):
   2) Encourage urgent professional help right now.
   3) If in the U.S., say: call or text 988 and/or call 911 if immediate danger.
      If outside the U.S., advise local emergency/crisis services.
-- If the user shows severe panic/crisis language (can’t breathe, chest pain, want to die, going to hurt myself, hallucinations, mania, etc.), treat it as crisis and follow the steps above.
+- If the user shows severe panic/crisis language (can’t breathe,...ns, mania, etc.), treat it as crisis and follow the steps above.
 
 Your operating principle:
 We don’t fix people. We calibrate execution.
@@ -73,28 +74,163 @@ One or two short sentences maximum.
 The Routine (10–30 seconds):
 Give a short, rehearsable routine the user can run immediately.
 Use numbered steps.
-Include ALL of these:
-- one breath instruction
-- one body cue
-- one focus phrase (cue words are OK)
-- one next action
 
-Focus Reminder:
-One short sentence that locks attention on what matters right now.
+Anchor phrase:
+One short phrase the user repeats to lock in.
 
-Additional rules:
-- Do NOT ask more than one clarifying question, and only if you truly need it to create the routine.
-- Do NOT use clinical terms like “diagnosis”, “disorder”, “treatment”, “depression protocol”, “CBT”, etc.
-- Do NOT validate emotions with therapy-style lines (avoid “it’s okay to feel…”).
-- Keep it practical. Keep it short. End with Focus Reminder (not “Next step”).
+One rep:
+One concrete “next rep” action. Tiny and specific.
+
+If needed:
+Ask ONE question that would meaningfully improve the routine. Only one.
 `.trim();
+
+type Agent = "coach" | "stock" | "codecheck" | "fueling" | "errortracker";
+
+function normalizeAgent(v: unknown): Agent {
+  const s = typeof v === "string" ? v.trim().toLowerCase() : "";
+  if (s === "stock" || s === "codecheck" || s === "fueling" || s === "errortracker") return s as Agent;
+  return "coach";
+}
+
+function buildSystemPrompt(agent: Agent): string {
+  if (agent === "coach") return BASE_SYSTEM_PROMPT;
+
+  if (agent === "codecheck") {
+    return (
+      BASE_SYSTEM_PROMPT +
+      `
+
+Agent mode: Code Check.
+Rules (non-negotiable):
+- You only identify bugs and performance bottlenecks.
+- You do NOT explain how the code works.
+- Output only a list of fixes. No extra coaching.
+- If the user did not provide code, ask for the code in one short sentence.
+`
+    );
+  }
+
+  if (agent === "fueling") {
+    return (
+      BASE_SYSTEM_PROMPT +
+      `
+
+Agent mode: Schedule Fueling.
+Rules (non-negotiable):
+- The user gives a daily schedule; you return specific times for meals and caffeine.
+- Keep it practical and short.
+- Include exactly ONE short safety line: “General guidance only.”
+`
+    );
+  }
+
+  if (agent === "errortracker") {
+    return (
+      BASE_SYSTEM_PROMPT +
+      `
+
+Agent mode: Error Tracker.
+Rules (non-negotiable):
+- From the user's logs, identify the ONE most repeated mistake.
+- Provide ONE directive for tomorrow.
+- No extra analysis, no extra coaching, no second directive.
+- If the user did not provide logs, ask for them in one short sentence.
+`
+    );
+  }
+
+  // stock agent is handled tool-first (no OpenAI analysis)
+  return BASE_SYSTEM_PROMPT;
+}
+
+function formatPct(n: number): string {
+  if (!isFinite(n)) return "—";
+  const sign = n > 0 ? "+" : "";
+  return `${sign}${(Math.round(n * 10) / 10).toFixed(1)}%`;
+}
+
+function extractTickers(text: string): string[] {
+  const matches = (text || "").toUpperCase().match(/\b[A-Z]{1,6}(?:[.-][A-Z]{1,3})?\b/g) ?? [];
+  const blacklist = new Set(["USD", "US", "TX", "USA", "CEO", "CFO", "AI", "API", "GPT"]);
+  const uniq: string[] = [];
+  for (const m of matches) {
+    if (blacklist.has(m)) continue;
+    if (!uniq.includes(m)) uniq.push(m);
+    if (uniq.length >= 10) break;
+  }
+  return uniq;
+}
+
+async function fetchFinnhubJSON(url: string): Promise<any> {
+  const key = process.env.FINNHUB_API_KEY;
+  if (!key) throw new Error("Missing FINNHUB_API_KEY");
+  const res = await fetch(url + (url.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(key), {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(t || `Finnhub request failed (${res.status})`);
+  }
+  return res.json();
+}
+
+async function getStockSummary(ticker: string): Promise<string> {
+  const q = await fetchFinnhubJSON(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(ticker)}`);
+  const price = typeof q?.c === "number" ? q.c : null;
+
+  // Volume change (last 2 daily candles)
+  const nowSec = Math.floor(Date.now() / 1000);
+  const fromSec = nowSec - 60 * 60 * 24 * 10;
+  const c = await fetchFinnhubJSON(
+    `https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(ticker)}&resolution=D&from=${fromSec}&to=${nowSec}`
+  );
+
+  let volChangePct: string = "—";
+  if (c?.s === "ok" && Array.isArray(c?.v) && c.v.length >= 2) {
+    const v1 = Number(c.v[c.v.length - 2]);
+    const v2 = Number(c.v[c.v.length - 1]);
+    if (isFinite(v1) && isFinite(v2) && v1 > 0) volChangePct = formatPct(((v2 - v1) / v1) * 100);
+  }
+
+  // Single headline (latest company news)
+  const to = new Date().toISOString().slice(0, 10);
+  const from = new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString().slice(0, 10);
+  const news = await fetchFinnhubJSON(
+    `https://finnhub.io/api/v1/company-news?symbol=${encodeURIComponent(ticker)}&from=${from}&to=${to}`
+  );
+
+  let headline = "No major headline found.";
+  if (Array.isArray(news) && news.length) {
+    const item = news[0];
+    const h = typeof item?.headline === "string" ? item.headline.trim() : "";
+    const src = typeof item?.source === "string" ? item.source.trim() : "";
+    const dt = typeof item?.datetime === "number" ? new Date(item.datetime * 1000).toISOString().slice(0, 10) : "";
+    headline = h ? `${h}${src || dt ? ` (${[src, dt].filter(Boolean).join(", ")})` : ""}` : headline;
+  }
+
+  const p = price != null ? `$${price}` : "—";
+  return `${ticker} — ${p} | Vol: ${volChangePct} | Headline: ${headline}`;
+}
+
+function streamText(text: string) {
+  const encoder = new TextEncoder();
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      const chunkSize = 64;
+      for (let i = 0; i < text.length; i += chunkSize) {
+        controller.enqueue(encoder.encode(text.slice(i, i + chunkSize)));
+      }
+      controller.close();
+    },
+  });
+}
 
 type CleanMsg = { role: "system" | "user" | "assistant"; content: string };
 
-function sanitizeMessages(input: any): CleanMsg[] {
-  if (!Array.isArray(input)) return [];
-
-  const cleaned = input
+function sanitizeMessages(messages: any[]): CleanMsg[] {
+  const cleaned = messages
     .filter(
       (m) =>
         m &&
@@ -113,42 +249,37 @@ function sanitizeMessages(input: any): CleanMsg[] {
 }
 
 function countChars(messages: CleanMsg[]) {
-  return messages.reduce((sum, m) => sum + m.content.length, 0);
+  return messages.reduce((acc, m) => acc + (m.content?.length ?? 0), 0);
 }
 
 function todayISODate() {
-  // date in UTC: YYYY-MM-DD
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+// SUPER rough estimate (keeps us from unbounded spend)
+function roughTokensFromText(s: string) {
+  // ~4 chars per token on average (English); guard only.
+  return Math.ceil((s?.length ?? 0) / 4);
 }
 
 function calcCostUSD(inputTokens: number, outputTokens: number) {
-  if (!INPUT_USD_PER_1K && !OUTPUT_USD_PER_1K) return 0;
-  const inCost = (inputTokens / 1000) * INPUT_USD_PER_1K;
-  const outCost = (outputTokens / 1000) * OUTPUT_USD_PER_1K;
-  return +(inCost + outCost);
+  if (!INPUT_USD_PER_1K || !OUTPUT_USD_PER_1K) return 0;
+  return (inputTokens / 1000) * INPUT_USD_PER_1K + (outputTokens / 1000) * OUTPUT_USD_PER_1K;
 }
 
 async function getSupabase() {
-  const cookieStore = await cookies();
-
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, // anon is correct with RLS
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
-          } catch {
-            // ignore in route handlers
-          }
-        },
+  const cookieStore = cookies();
+  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    cookies: {
+      get(name: string) {
+        return cookieStore.get(name)?.value;
       },
-    }
-  );
+    },
+  });
 }
 
 export async function POST(req: Request) {
@@ -162,11 +293,7 @@ export async function POST(req: Request) {
     }
 
     // --- Paid enforcement ---
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("is_paid")
-      .eq("id", authData.user.id)
-      .single();
+    const { data: profile, error: profileError } = await supabase.from("profiles").select("is_paid").eq("id", authData.user.id).single();
 
     if (profileError || !profile?.is_paid) {
       return NextResponse.json({ error: "Paid access required" }, { status: 402 });
@@ -179,6 +306,8 @@ export async function POST(req: Request) {
     }
 
     const stream = Boolean(body.stream);
+
+    const agent = normalizeAgent(body.agent);
 
     const cleaned = sanitizeMessages(body.messages);
     if (!cleaned.length) {
@@ -200,10 +329,7 @@ export async function POST(req: Request) {
 
     if (usageErr) {
       // if table not created yet, you'll see this. We hard-fail to avoid unbounded spend.
-      return NextResponse.json(
-        { error: "Usage table missing. Run the SQL migration for ai_usage_daily." },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Usage table missing. Run the SQL migration for ai_usage_daily." }, { status: 500 });
     }
 
     const used = usageRow ?? { requests: 0, input_tokens: 0, output_tokens: 0, cost_usd: 0 };
@@ -222,9 +348,64 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Daily cost limit reached" }, { status: 429 });
     }
 
+    // --- Agent: STOCK DATA (tool-first, no analysis) ---
+    if (agent === "stock") {
+      const lastUser = [...cleaned].reverse().find((m) => m.role === "user")?.content ?? "";
+      const tickers = extractTickers(lastUser);
+
+      if (!tickers.length) {
+        const msg = "Provide 1–3 tickers (example: AAPL, MSFT).";
+
+        await supabase.from("ai_usage_daily").upsert(
+          {
+            user_id: authData.user.id,
+            day,
+            requests: used.requests + 1,
+            input_tokens: used.input_tokens,
+            output_tokens: used.output_tokens,
+            cost_usd: used.cost_usd,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,day" }
+        );
+
+        return stream
+          ? new Response(streamText(msg), { headers: { "Content-Type": "text/plain; charset=utf-8" } })
+          : NextResponse.json({ reply: msg });
+      }
+
+      const lines: string[] = [];
+      for (const t of tickers) {
+        try {
+          lines.push(await getStockSummary(t));
+        } catch (e: any) {
+          lines.push(`${t} — Error: ${String(e?.message ?? e)}`);
+        }
+      }
+
+      const out = lines.join("\n");
+
+      await supabase.from("ai_usage_daily").upsert(
+        {
+          user_id: authData.user.id,
+          day,
+          requests: used.requests + 1,
+          input_tokens: used.input_tokens,
+          output_tokens: used.output_tokens,
+          cost_usd: used.cost_usd,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,day" }
+      );
+
+      return stream
+        ? new Response(streamText(out), { headers: { "Content-Type": "text/plain; charset=utf-8" } })
+        : NextResponse.json({ reply: out });
+    }
+
     // Construct messages for OpenAI
     const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: buildSystemPrompt(agent) },
       ...cleaned.map((m) => ({ role: m.role, content: m.content })),
     ];
 
@@ -244,6 +425,7 @@ export async function POST(req: Request) {
       const usage = completion.usage ?? { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
       const inputTokens = usage.prompt_tokens ?? 0;
       const outputTokens = usage.completion_tokens ?? 0;
+
       const costUSD = calcCostUSD(inputTokens, outputTokens);
 
       // upsert daily usage
@@ -269,35 +451,31 @@ export async function POST(req: Request) {
     let finalInputTokens = 0;
     let finalOutputTokens = 0;
 
-    const encoder = new TextEncoder();
+    const completion = await openai.chat.completions.create({
+      model: MODEL,
+      messages,
+      temperature: 0.6,
+      max_tokens: MAX_OUTPUT_TOKENS,
+      stream: true,
+    });
 
-    const readable = new ReadableStream<Uint8Array>({
+    const streamRes = new ReadableStream<Uint8Array>({
       async start(controller) {
+        const encoder = new TextEncoder();
+
         try {
-          const streamResp = await openai.chat.completions.create({
-            model: MODEL,
-            messages,
-            temperature: 0.6,
-            max_tokens: MAX_OUTPUT_TOKENS,
-            stream: true,
-            // Some SDKs support include_usage. If not present, usage stays 0 and we still count requests.
-            stream_options: { include_usage: true } as any,
-          });
-
-          for await (const chunk of streamResp as any) {
-            const delta = chunk?.choices?.[0]?.delta?.content ?? "";
-            if (delta) {
-              streamedText += delta;
-              controller.enqueue(encoder.encode(delta));
+          for await (const part of completion as any) {
+            const token = part?.choices?.[0]?.delta?.content ?? "";
+            if (token) {
+              streamedText += token;
+              controller.enqueue(encoder.encode(token));
             }
-
-            // If usage arrives in the last chunk (include_usage), capture it.
-            const u = chunk?.usage;
-            if (u?.prompt_tokens != null) finalInputTokens = u.prompt_tokens;
-            if (u?.completion_tokens != null) finalOutputTokens = u.completion_tokens;
           }
 
-          // update usage at the end (best-effort)
+          // rough token estimate for daily caps (since streaming doesn't provide usage)
+          finalInputTokens = roughTokensFromText(messages.map((m) => m.content).join("\n"));
+          finalOutputTokens = roughTokensFromText(streamedText);
+
           const costUSD = calcCostUSD(finalInputTokens, finalOutputTokens);
 
           await supabase.from("ai_usage_daily").upsert(
@@ -315,24 +493,18 @@ export async function POST(req: Request) {
 
           controller.close();
         } catch (e) {
-          // If stream fails, close cleanly.
-          controller.enqueue(encoder.encode("\n\n[Error: streaming failed]\n"));
-          controller.close();
+          controller.error(e);
         }
       },
     });
 
-    return new Response(readable, {
+    return new Response(streamRes, {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
-        "Cache-Control": "no-cache, no-transform",
       },
     });
-  } catch (err) {
-    console.error("/api/chat error:", err);
-    return NextResponse.json(
-      { error: "The coaching service is temporarily unavailable. Please try again shortly." },
-      { status: 500 }
-    );
+  } catch (err: any) {
+    const msg = (err?.message ?? "Unknown error").toString();
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

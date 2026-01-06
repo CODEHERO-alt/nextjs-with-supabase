@@ -17,9 +17,9 @@ const DR_BRETT_IMAGE_URL =
 
 // ✅ SRU Hotline number (replace these two lines with the real forwarding number)
 // Tip: use Twilio/OpenPhone/Google Voice, then put the public number here.
-const SRU_PHONE_DISPLAY = "+1 (000) 000-0000";
-const SRU_PHONE_TEL = "tel:+10000000000";
-const SRU_PHONE_SMS = "sms:+10000000000";
+const SRU_PHONE_DISPLAY = "+1 (555) 010-9888";
+const SRU_PHONE_TEL = "tel:+15550109888";
+const SRU_PHONE_SMS = "sms:+15550109888";
 
 function PlatformIcon({
   kind,

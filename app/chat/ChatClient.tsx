@@ -35,8 +35,9 @@ type Session = {
 };
 
 const BRAND = {
-  name: "Dr. Brett GPT",
-  subtitle: "Mental game coach for athletes",
+  name: "BrettGPT Elite",
+  subtitle: "Peak-performance coaching for athletes",
+  mark: "BE",
 };
 
 /**
@@ -57,12 +58,14 @@ const QUICK_ACTIONS = [
     k: "mistake",
     title: "After a mistake",
     tag: "Reset",
+    detail: "8-second reset to release tension and refocus the next rep.",
     prompt: "I just made a mistake and my body tightened up. I need a quick reset routine so I can execute the next rep.",
   },
   {
     k: "clutch",
     title: "Late-game / clutch",
     tag: "Clutch",
+    detail: "One-breath routine to lock in under pressure.",
     prompt:
       "It’s a high-pressure moment and I can feel myself thinking outcomes instead of executing. I need a short routine for this moment.",
   },
@@ -70,18 +73,21 @@ const QUICK_ACTIONS = [
     k: "injury",
     title: "Coming back from injury",
     tag: "Confidence",
+    detail: "Trust-building cues to recommit to movement.",
     prompt: "I’m coming back from injury and I don’t fully trust my body yet. I need a simple routine to commit to movement again.",
   },
   {
     k: "slump",
     title: "Slump / cold streak",
     tag: "Reset",
+    detail: "Stop forcing and return to clean execution.",
     prompt: "I’m in a slump and I’m pressing. I need a routine to stop forcing and get back to clean execution.",
   },
   {
     k: "leadership",
     title: "Leadership pressure",
     tag: "Poise",
+    detail: "Command presence without overthinking outcomes.",
     prompt: "People are looking to me to lead and I can feel the pressure. I need a routine to stay composed and decisive.",
   },
 ];
@@ -819,10 +825,12 @@ export default function ChatPage() {
 
   return (
     // NOTE: lock to viewport height so page does not grow
-    <div className="h-screen bg-[#0b0f19] text-slate-100 overflow-hidden">
+    <div className="relative h-screen bg-[#070a12] text-slate-100 overflow-hidden">
       {/* Fixed interactive gradient background — never “cuts off” */}
       <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-[#0b0f19]" />
+        <div className="absolute inset-0 bg-[#070a12]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(100,116,255,0.12),transparent_45%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(20,184,166,0.08),transparent_40%)]" />
         <div
           className="absolute inset-0 opacity-80"
           style={{
@@ -843,8 +851,8 @@ export default function ChatPage() {
               "radial-gradient(760px circle at calc(var(--mx) - 18%) calc(var(--my) + 44%), rgba(244,197,66,0.10), transparent 60%)",
           }}
         />
-        <div className="absolute inset-0 opacity-40 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent_30%,rgba(255,255,255,0.03))]" />
-        <div className="absolute inset-0 opacity-[0.08] bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.65)_1px,transparent_0)] [background-size:24px_24px]" />
+        <div className="absolute inset-0 opacity-40 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.05),transparent_28%,rgba(255,255,255,0.02))]" />
+        <div className="absolute inset-0 opacity-[0.08] bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.6)_1px,transparent_0)] [background-size:26px_26px]" />
       </div>
 
       {/* full height layout */}
@@ -852,14 +860,14 @@ export default function ChatPage() {
         {/* Sidebar */}
         <aside
           className={[
-            "hidden lg:flex h-full w-[320px] shrink-0 flex-col border-r border-white/10 bg-black/10 backdrop-blur-xl",
+            "hidden lg:flex h-full w-[320px] shrink-0 flex-col border-r border-white/10 bg-white/[0.04] backdrop-blur-2xl",
             sidebarOpen ? "" : "w-0 overflow-hidden opacity-0",
           ].join(" ")}
         >
           <div className="flex items-center justify-between px-5 py-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-[11px] font-semibold ring-1 ring-white/10">
-                BG
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/30 via-sky-500/20 to-emerald-400/20 text-[11px] font-semibold ring-1 ring-white/15">
+                {BRAND.mark}
               </div>
               <div className="leading-tight">
                 <div className="text-sm font-semibold tracking-tight">{BRAND.name}</div>
@@ -868,7 +876,7 @@ export default function ChatPage() {
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="rounded-lg px-2 py-1 text-[11px] text-slate-300 hover:bg-white/5 hover:text-slate-100"
+              className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-slate-300 hover:bg-white/10 hover:text-slate-100"
             >
               Collapse
             </button>
@@ -877,10 +885,21 @@ export default function ChatPage() {
           <div className="flex min-h-0 flex-1 flex-col px-5">
             <button
               onClick={newSession}
-              className="w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-left text-[12px] font-semibold hover:bg-white/15"
+              className="w-full rounded-xl border border-white/10 bg-gradient-to-r from-white/10 via-white/5 to-white/10 px-3 py-2 text-left text-[12px] font-semibold hover:bg-white/15"
             >
               + New session
             </button>
+
+            <div className="mt-3">
+              <label className="sr-only" htmlFor="session-search">
+                Search sessions
+              </label>
+              <input
+                id="session-search"
+                placeholder="Search sessions"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[12px] text-slate-200 placeholder:text-slate-500 outline-none focus:border-white/20"
+              />
+            </div>
 
             <div className="mt-4 min-h-0 flex-1 overflow-auto pr-1">
               <div>
@@ -891,7 +910,7 @@ export default function ChatPage() {
                       key={s.id}
                       className={[
                         "relative w-full rounded-xl border border-white/10 px-3 py-2 hover:bg-white/5",
-                        s.id === activeId ? "bg-white/10" : "bg-black/15",
+                        s.id === activeId ? "bg-white/10" : "bg-white/[0.03]",
                       ].join(" ")}
                     >
                       <button onClick={() => setActiveId(s.id)} className="block w-full text-left pr-8">
@@ -939,7 +958,7 @@ export default function ChatPage() {
                     <button
                       key={a.k}
                       onClick={() => applyQuick(a.prompt, a.tag)}
-                      className="w-full rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-left hover:bg-white/5"
+                      className="w-full rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-left transition hover:bg-white/10"
                       title={a.prompt}
                     >
                       <div className="flex items-center justify-between">
@@ -948,6 +967,7 @@ export default function ChatPage() {
                           {a.tag}
                         </span>
                       </div>
+                      <div className="mt-1 text-[11px] leading-5 text-slate-400">{a.detail}</div>
                     </button>
                   ))}
                 </div>
@@ -956,7 +976,7 @@ export default function ChatPage() {
           </div>
 
           <div className="px-5 pb-5 pt-4">
-            <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-[0_8px_24px_rgba(4,7,20,0.35)]">
               <div className="text-[11px] font-semibold text-slate-300">Safety</div>
               <div className="mt-2 text-[11px] leading-5 text-slate-400">
                 Coaching only — not medical care. If you’re in crisis, seek immediate local professional help.{" "}
@@ -971,7 +991,7 @@ export default function ChatPage() {
         {/* Main */}
         <main className="relative z-10 flex h-full flex-1 flex-col min-w-0">
           {/* Top bar */}
-          <div className="shrink-0 sticky top-0 z-20 border-b border-white/10 bg-black/10 backdrop-blur-xl">
+          <div className="shrink-0 sticky top-0 z-20 border-b border-white/10 bg-white/[0.04] backdrop-blur-2xl">
             <div className="mx-auto flex max-w-[1200px] items-center justify-between px-4 py-3 md:px-6">
               <div className="flex items-center gap-3">
                 {!sidebarOpen && (
@@ -982,12 +1002,17 @@ export default function ChatPage() {
                     Sidebar
                   </button>
                 )}
-                <div className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/90" />
-                  <span className="text-[11px] text-slate-300">
-                    {BRAND.name} <span className="text-slate-500">•</span>{" "}
-                    <span className="text-slate-400">{isTyping ? "Thinking…" : "Online"}</span>
-                  </span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/90" />
+                    <span className="text-[11px] text-slate-300">
+                      {BRAND.name} <span className="text-slate-500">•</span>{" "}
+                      <span className="text-slate-400">{isTyping ? "Thinking…" : "Online"}</span>
+                    </span>
+                  </div>
+                  <div className="mt-1 text-[13px] font-semibold text-slate-100">
+                    {active?.title ?? "Session"}
+                  </div>
                 </div>
               </div>
 
@@ -1000,7 +1025,7 @@ export default function ChatPage() {
                     id="agent"
                     value={agent}
                     onChange={(e) => setAgent(e.target.value as Agent)}
-                    className="h-[30px] rounded-lg border border-white/10 bg-white/5 px-2 text-[11px] text-slate-100 outline-none hover:bg-white/10"
+                    className="h-[32px] rounded-lg border border-white/10 bg-white/5 px-2 text-[11px] text-slate-100 outline-none hover:bg-white/10"
                     title={AGENTS.find((a) => a.id === agent)?.hint ?? "Agent mode"}
                   >
                     {AGENTS.map((a) => (
@@ -1037,7 +1062,7 @@ export default function ChatPage() {
                 onScroll={markUserScrolling}
                 onWheel={markUserScrolling}
                 onTouchMove={markUserScrolling}
-                className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/10 bg-black/10 backdrop-blur-xl"
+                className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.04] shadow-[0_10px_40px_rgba(4,7,20,0.45)] backdrop-blur-2xl"
                 style={{
                   // keeps layout from shifting when scrollbar appears
                   scrollbarGutter: "stable",
@@ -1060,8 +1085,8 @@ export default function ChatPage() {
                   {/* ChatGPT-style "thinking stream" */}
                   {isTyping && (
                     <div className="flex gap-3">
-                      <Avatar label="BG" />
-                      <div className="max-w-[82ch] rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+                      <Avatar label={BRAND.mark} />
+                      <div className="max-w-[82ch] rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 shadow-[0_8px_24px_rgba(4,7,20,0.35)]">
                         <div className="text-[11px] font-semibold text-slate-100">{BRAND.name}</div>
                         <div className="mt-2 space-y-1 text-[12px] leading-6 text-slate-300">
                           <div className="flex items-center gap-2">
@@ -1084,7 +1109,7 @@ export default function ChatPage() {
               </div>
 
               {/* Composer */}
-              <div className="mt-4 shrink-0 rounded-2xl border border-white/10 bg-black/10 p-3 backdrop-blur-xl">
+              <div className="mt-4 shrink-0 rounded-2xl border border-white/10 bg-white/[0.04] p-3 backdrop-blur-2xl">
                 <div className="flex items-end gap-2">
                   <textarea
                     value={input}
@@ -1108,13 +1133,13 @@ export default function ChatPage() {
                   <button
                     onClick={() => void send()}
                     disabled={!input.trim() || isTyping}
-                    className="h-[46px] shrink-0 rounded-xl border border-white/10 bg-white/10 px-4 text-[12px] font-semibold text-slate-100 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="h-[46px] shrink-0 rounded-xl border border-white/10 bg-gradient-to-r from-indigo-500/30 via-sky-500/20 to-emerald-400/20 px-4 text-[12px] font-semibold text-slate-100 hover:from-indigo-500/40 hover:to-emerald-400/30 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Send
                   </button>
                 </div>
 
-                <div className="mt-2 flex flex-wrap gap-2">
+                <div className="mt-2 flex flex-wrap items-center gap-2">
                   {QUICK_ACTIONS.map((a) => (
                     <button
                       key={a.k}
@@ -1124,6 +1149,7 @@ export default function ChatPage() {
                       {a.tag}
                     </button>
                   ))}
+                  <span className="text-[11px] text-slate-500">Press Enter to send • Shift+Enter for new line</span>
                 </div>
               </div>
             </section>
@@ -1135,7 +1161,7 @@ export default function ChatPage() {
                 style={{ scrollbarGutter: "stable" }}
               >
                 {/* Focus / Mantra */}
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-[0_8px_24px_rgba(4,7,20,0.35)] backdrop-blur-2xl">
                   <div className="flex items-center justify-between">
                     <div className="text-[11px] font-semibold text-slate-300">Today’s focus</div>
                     <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
@@ -1149,7 +1175,7 @@ export default function ChatPage() {
                 </div>
 
                 {/* Active routine */}
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-[0_8px_24px_rgba(4,7,20,0.35)] backdrop-blur-2xl">
                   <div className="flex items-center justify-between">
                     <div className="text-[11px] font-semibold text-slate-300">Active routine</div>
                     <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">
@@ -1163,18 +1189,18 @@ export default function ChatPage() {
                 </div>
 
                 {/* Mental Watchlist */}
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-[0_8px_24px_rgba(4,7,20,0.35)] backdrop-blur-2xl">
                   <div className="text-[11px] font-semibold text-slate-300">Mental watchlist</div>
                   <div className="mt-3 space-y-2">
-                    <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
+                    <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2">
                       <div className="text-[11px] font-semibold text-slate-200">Breath</div>
                       <div className="mt-1 text-[11px] leading-5 text-slate-400">One calm exhale before action.</div>
                     </div>
-                    <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
+                    <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2">
                       <div className="text-[11px] font-semibold text-slate-200">Cue</div>
                       <div className="mt-1 text-[11px] leading-5 text-slate-400">One word that locks you in.</div>
                     </div>
-                    <div className="rounded-xl border border-white/10 bg-black/15 px-3 py-2">
+                    <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2">
                       <div className="text-[11px] font-semibold text-slate-200">Next action</div>
                       <div className="mt-1 text-[11px] leading-5 text-slate-400">Only the next rep/play matters.</div>
                     </div>
@@ -1182,7 +1208,7 @@ export default function ChatPage() {
                 </div>
 
                 {/* Session notes */}
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-[0_8px_24px_rgba(4,7,20,0.35)] backdrop-blur-2xl">
                   <div className="text-[11px] font-semibold text-slate-300">Session notes</div>
 
                   {sessionNotes.length ? (
@@ -1199,7 +1225,7 @@ export default function ChatPage() {
                 </div>
 
                 {/* Safety (with link) */}
-                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 backdrop-blur-xl">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-[0_8px_24px_rgba(4,7,20,0.35)] backdrop-blur-2xl">
                   <div className="text-[11px] font-semibold text-slate-300">Safety</div>
                   <p className="mt-2 text-[12px] leading-6 text-slate-300">
                     Coaching only — not medical care. If you’re in crisis, seek immediate local professional help.{" "}
@@ -1220,7 +1246,7 @@ export default function ChatPage() {
 /** ---------------- UI bits ---------------- */
 function Avatar({ label }: { label: string }) {
   return (
-    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-[11px] font-semibold ring-1 ring-white/10">
+    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/30 via-sky-500/20 to-emerald-400/20 text-[11px] font-semibold ring-1 ring-white/15">
       {label}
     </div>
   );
@@ -1236,7 +1262,7 @@ function ChatRow({ message }: { message: Message }) {
 
   return (
     <div className="flex gap-3 justify-start">
-      <Avatar label={isUser ? "You" : "BG"} />
+      <Avatar label={isUser ? "You" : BRAND.mark} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -1252,8 +1278,10 @@ function ChatRow({ message }: { message: Message }) {
 
         <div
           className={[
-            "mt-2 max-w-[90ch] rounded-2xl border border-white/10 px-4 py-3 text-[14px] leading-7",
-            isUser ? "bg-white/5 text-slate-100" : "bg-black/20 text-slate-200",
+            "mt-2 max-w-[90ch] rounded-2xl border border-white/10 px-4 py-3 text-[14px] leading-7 shadow-[0_8px_24px_rgba(4,7,20,0.35)]",
+            isUser
+              ? "bg-gradient-to-br from-white/10 via-white/5 to-white/10 text-slate-100"
+              : "bg-white/[0.04] text-slate-200",
           ].join(" ")}
         >
           {isUser ? (
